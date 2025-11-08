@@ -19,8 +19,8 @@ const SOUNDS = {
   },
   'sound3': {
     id: 'vWZ6hmHj2MA',
-    name: 'Study Music',
-    description: 'Relaxing study ambiance'
+    name: 'The Great Gig in the Sky',
+    description: 'Pink Floyd - Relaxing study ambiance'
   }
 };
 
