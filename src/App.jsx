@@ -16,6 +16,11 @@ const SOUNDS = {
     id: 'nMfPqeZjc2c',
     name: 'White Noise',
     description: 'Background ambient sound'
+  },
+  'sound3': {
+    id: 'vWZ6hmHj2MA',
+    name: 'Study Music',
+    description: 'Relaxing study ambiance'
   }
 };
 
