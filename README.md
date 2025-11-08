@@ -73,9 +73,39 @@ study-sound/
 - Modern web browser with JavaScript enabled
 - Internet connection (for YouTube API and background image)
 
+## Deployment
+
+### Deploy to Vercel
+
+1. **Install Vercel CLI** (optional, for command line deployment):
+   ```bash
+   npm i -g vercel
+   ```
+
+2. **Deploy via Vercel Dashboard** (Recommended):
+   - Go to [vercel.com](https://vercel.com)
+   - Sign in with your GitHub account
+   - Click "New Project"
+   - Import your repository: `onfr0y/Sleepsound-onfr0y`
+   - Vercel will auto-detect it's a React app
+   - Click "Deploy"
+
+3. **Deploy via CLI**:
+   ```bash
+   vercel
+   ```
+   Follow the prompts to deploy.
+
+4. **Environment Variables** (if needed):
+   - No environment variables required for this app
+   - YouTube API is loaded directly from Google's CDN
+
+Your app will be live at: `https://your-project-name.vercel.app`
+
 ## Notes
 
 - The background music uses the YouTube IFrame API
 - The timer runs in your browser - refreshing the page will reset it
 - Background image and music are loaded from external sources
 - Built with React 18 and Create React App
+- Optimized for Vercel deployment with proper routing and caching
