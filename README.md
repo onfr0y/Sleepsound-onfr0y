@@ -33,10 +33,10 @@ npm install
 
 2. Start the development server:
 ```bash
-npm start
+npm run dev
 ```
 
-3. Open [http://localhost:3000](http://localhost:3000) in your browser
+3. Open [http://localhost:3000](http://localhost:3000) in your browser (Vite will auto-open it)
 
 ### Build for Production
 
@@ -44,17 +44,25 @@ npm start
 npm run build
 ```
 
-This creates an optimized production build in the `build` folder.
+This creates an optimized production build in the `dist` folder.
+
+### Preview Production Build
+
+```bash
+npm run preview
+```
+
+This serves the production build locally for testing.
 
 ## Project Structure
 
 ```
 study-sound/
-├── public/
-│   └── index.html          # HTML template
+├── index.html             # HTML template (Vite entry point)
+├── vite.config.js         # Vite configuration
 ├── src/
 │   ├── App.jsx            # Main React component
-│   ├── index.js           # React entry point
+│   ├── main.jsx           # React entry point
 │   └── index.css          # Styles and glassmorphism effects
 ├── package.json           # Dependencies and scripts
 └── README.md             # This file
@@ -107,5 +115,5 @@ Your app will be live at: `https://your-project-name.vercel.app`
 - The background music uses the YouTube IFrame API
 - The timer runs in your browser - refreshing the page will reset it
 - Background image and music are loaded from external sources
-- Built with React 18 and Create React App
+- Built with React 18 and Vite for fast development and optimized builds
 - Optimized for Vercel deployment with proper routing and caching
