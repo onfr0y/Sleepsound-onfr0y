@@ -64,6 +64,16 @@ const BACKGROUNDS = [
     id: 'bg9',
     name: 'Background 9',
     url: 'https://i.pinimg.com/736x/19/87/65/198765757bb552d86828ca3cab828471.jpg'
+  },
+  {
+    id: 'bg10',
+    name: 'Background 10',
+    url: 'https://i.pinimg.com/736x/88/d7/82/88d78214908da8562209f762180948d8.jpg'
+  },
+  {
+    id: 'bg11',
+    name: 'Background 11',
+    url: 'https://i.pinimg.com/736x/4a/6d/7d/4a6d7de3a3f29a2d7b0b6c1ce88f808b.jpg'
   }
 ];
 
