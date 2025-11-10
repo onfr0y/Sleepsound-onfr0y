@@ -95,14 +95,29 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showWallpaperPicker, setShowWallpaperPicker] = useState(false);
   const [pulse, setPulse] = useState(false);
+  const [repCount, setRepCount] = useState(0);
+  const repCountRef = React.useRef(0);
 
   const workTime = MODES[currentMode].work;
   const breakTime = MODES[currentMode].break;
+  
+  // Completion sound video ID
+  const COMPLETION_SOUND_ID = '_Gukzgo-Mi4';
 
   // YouTube Player
   const [youtubePlayer, setYoutubePlayer] = useState(null);
   const playerRef = React.useRef(null);
   const containerIdRef = React.useRef(`youtube-player-${Date.now()}`);
+  
+  // Completion Sound Player
+  const [completionPlayer, setCompletionPlayer] = useState(null);
+  const completionPlayerRef = React.useRef(null);
+  const completionContainerIdRef = React.useRef(`completion-player-${Date.now()}`);
+  
+  // Sync ref with state
+  useEffect(() => {
+    repCountRef.current = repCount;
+  }, [repCount]);
 
   // Initialize YouTube Player
   useEffect(() => {
@@ -163,12 +178,85 @@ function App() {
     }
   }, []); // Only run once on mount
 
+  // Initialize Completion Sound Player
+  useEffect(() => {
+    const initCompletionPlayer = () => {
+      if (completionPlayerRef.current) return;
+      
+      // Create container if it doesn't exist
+      let container = document.getElementById(completionContainerIdRef.current);
+      if (!container) {
+        container = document.createElement('div');
+        container.id = completionContainerIdRef.current;
+        container.style.display = 'none';
+        document.body.appendChild(container);
+      }
+      
+      try {
+        const player = new window.YT.Player(completionContainerIdRef.current, {
+          height: '0',
+          width: '0',
+          videoId: COMPLETION_SOUND_ID,
+          playerVars: {
+            autoplay: 0,
+            loop: 0,
+            controls: 0,
+            disablekb: 1,
+            fs: 0,
+            iv_load_policy: 3,
+            modestbranding: 1,
+            playsinline: 1,
+            rel: 0
+          },
+          events: {
+            onReady: (event) => {
+              event.target.setVolume(volume);
+              setCompletionPlayer(event.target);
+              completionPlayerRef.current = event.target;
+            },
+            onStateChange: (event) => {
+              // When completion sound ends, stop it
+              if (event.data === window.YT.PlayerState.ENDED) {
+                event.target.stopVideo();
+              }
+            }
+          }
+        });
+      } catch (error) {
+        console.error('Error initializing completion player:', error);
+      }
+    };
+
+    // Initialize completion player after a delay to ensure main player is set up
+    const initTimer = setTimeout(() => {
+      if (window.YT && window.YT.Player) {
+        initCompletionPlayer();
+      } else {
+        // If API not ready, wait for it
+        const checkApi = setInterval(() => {
+          if (window.YT && window.YT.Player) {
+            clearInterval(checkApi);
+            initCompletionPlayer();
+          }
+        }, 100);
+        
+        // Cleanup interval after 10 seconds
+        setTimeout(() => clearInterval(checkApi), 10000);
+      }
+    }, 2000);
+
+    return () => clearTimeout(initTimer);
+  }, []); // Only run once on mount
+
   // Update YouTube player volume
   useEffect(() => {
     if (youtubePlayer) {
       youtubePlayer.setVolume(volume);
     }
-  }, [volume, youtubePlayer]);
+    if (completionPlayer) {
+      completionPlayer.setVolume(volume);
+    }
+  }, [volume, youtubePlayer, completionPlayer]);
 
   // Update YouTube player play/pause
   useEffect(() => {
@@ -212,6 +300,46 @@ function App() {
     }
   }, [currentSound]);
 
+  // Function to play completion sound
+  const playCompletionSound = () => {
+    if (completionPlayerRef.current) {
+      try {
+        const player = completionPlayerRef.current;
+        // Stop any currently playing completion sound
+        if (player.stopVideo) {
+          player.stopVideo();
+        }
+        // Load and play the completion sound
+        player.loadVideoById({
+          videoId: COMPLETION_SOUND_ID,
+          startSeconds: 0
+        });
+        setTimeout(() => {
+          if (player && player.playVideo) {
+            player.playVideo();
+          }
+        }, 500);
+      } catch (error) {
+        console.error('Error playing completion sound:', error);
+      }
+    } else if (completionPlayer) {
+      // Fallback if ref is not set but state is
+      try {
+        completionPlayer.loadVideoById({
+          videoId: COMPLETION_SOUND_ID,
+          startSeconds: 0
+        });
+        setTimeout(() => {
+          if (completionPlayer && completionPlayer.playVideo) {
+            completionPlayer.playVideo();
+          }
+        }, 500);
+      } catch (error) {
+        console.error('Error playing completion sound:', error);
+      }
+    }
+  };
+
   // Timer logic
   useEffect(() => {
     let interval = null;
@@ -221,15 +349,29 @@ function App() {
           if (prev <= 1) {
             // Session finished
             setIsRunning(false);
-            setIsWorkSession((prev) => {
-              const newIsWork = !prev;
-              if (newIsWork) {
+            setIsWorkSession((prevIsWork) => {
+              const newIsWork = !prevIsWork;
+              
+              if (prevIsWork) {
+                // Work session just ended - increment rep count
+                const newRepCount = repCountRef.current + 1;
+                repCountRef.current = newRepCount;
+                setRepCount(newRepCount);
+                
+                // Play completion sound
+                playCompletionSound();
+                
+                // Calculate break time: 30 minutes if repCount is a multiple of 4
+                const calculatedBreakTime = (newRepCount % 4 === 0) ? (30 * 60) : breakTime;
+                
+                setTimeLeft(calculatedBreakTime);
+                setTotalTime(calculatedBreakTime);
+              } else {
+                // Break session just ended, start work session
                 setTimeLeft(workTime);
                 setTotalTime(workTime);
-              } else {
-                setTimeLeft(breakTime);
-                setTotalTime(breakTime);
               }
+              
               setPulse(true);
               setTimeout(() => setPulse(false), 500);
               return newIsWork;
@@ -243,7 +385,7 @@ function App() {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isRunning, timeLeft, workTime, breakTime]);
+  }, [isRunning, timeLeft, workTime, breakTime, completionPlayer]);
 
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -262,6 +404,8 @@ function App() {
     setIsWorkSession(true);
     setTimeLeft(workTime);
     setTotalTime(workTime);
+    setRepCount(0);
+    repCountRef.current = 0;
   };
 
   const handleModeChange = (mode) => {
@@ -270,6 +414,8 @@ function App() {
     setIsWorkSession(true);
     setTimeLeft(MODES[mode].work);
     setTotalTime(MODES[mode].work);
+    setRepCount(0);
+    repCountRef.current = 0;
   };
 
   const handleToggleSound = () => {
@@ -296,6 +442,8 @@ function App() {
         setIsWorkSession(true);
         setTimeLeft(workTime);
         setTotalTime(workTime);
+        setRepCount(0);
+        repCountRef.current = 0;
       }
     };
 
@@ -356,6 +504,36 @@ function App() {
           <div className="timer-display-container">
             <div className="session-indicator">
               <span>{isWorkSession ? 'Work' : 'Break'}</span>
+              <div className="rep-indicator">
+                <div className="rep-circles">
+                  {[1, 2, 3, 4].map((circleNum) => {
+                    // Calculate completed reps in current cycle (1-4)
+                    const completedInCycle = repCount % 4 === 0 ? (repCount > 0 ? 4 : 0) : repCount % 4;
+                    const isFilled = circleNum <= completedInCycle;
+                    const isLongBreakRep = circleNum === 4;
+                    return (
+                      <div
+                        key={circleNum}
+                        className={`rep-circle ${isFilled ? 'filled' : ''} ${isLongBreakRep ? 'long-break' : ''}`}
+                        title={isLongBreakRep ? 'Long break after this rep' : `Rep ${circleNum}`}
+                      >
+                        {isLongBreakRep && (
+                          <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="8" cy="8" r="6"/>
+                            <path d="M8 4v4l3 2"/>
+                          </svg>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                {repCount > 0 && (
+                  <span className="rep-text">
+                    Rep {repCount}
+                    {repCount % 4 === 0 && !isWorkSession && ' • Long Break (30 min)'}
+                  </span>
+                )}
+              </div>
             </div>
             <div className={`timer-display ${pulse ? 'pulse' : ''}`}>
               {formatTime(timeLeft)}
