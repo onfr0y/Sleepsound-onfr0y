@@ -803,3 +803,50 @@ body {
         transform: scale(1.05);
     }
 }
+
+.custom-timers {
+    display: flex;
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+    justify-content: center;
+    animation: fadeIn 0.3s ease;
+}
+
+.custom-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.custom-input-group label {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.custom-time-input {
+    width: 80px;
+    padding: 0.75rem;
+    border-radius: 12px;
+    border: 2px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-primary);
+    font-size: 1.25rem;
+    text-align: center;
+    outline: none;
+    transition: all 0.3s ease;
+    backdrop-filter: var(--blur);
+    -webkit-backdrop-filter: var(--blur);
+}
+
+.custom-time-input:focus {
+    border-color: var(--glass-border-bright);
+    background: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 0 0 2px rgba(147, 197, 253, 0.2);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}

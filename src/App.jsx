@@ -9,8 +9,8 @@ const MODES = {
 const SOUNDS = {
   'sound1': {
     id: 'pQI64hD2sJw',
-    name: '40 HZ Binaural beats',
-    description: '"FOCUS & CONCENTRATION" with Dr. Andrew Huberman'
+    name: '40 HZ Binaural beat/s',
+    description: '"FOCUS & CONCE nNTRsdsd ATION" with Dr. Andrew Huberman'
   },
   'sound2': {
     id: 'nMfPqeZjc2c',
@@ -98,9 +98,13 @@ function App() {
   const [repCount, setRepCount] = useState(0);
   const repCountRef = React.useRef(0);
 
-  const workTime = MODES[currentMode].work;
-  const breakTime = MODES[currentMode].break;
-  
+  // Custom timer state
+  const [customWorkMinutes, setCustomWorkMinutes] = useState(25);
+  const [customBreakMinutes, setCustomBreakMinutes] = useState(5);
+
+  const workTime = currentMode === 'custom' ? customWorkMinutes * 60 : MODES[currentMode].work;
+  const breakTime = currentMode === 'custom' ? customBreakMinutes * 60 : MODES[currentMode].break;
+
   // Completion sound video ID
   const COMPLETION_SOUND_ID = '_Gukzgo-Mi4';
 
@@ -108,12 +112,12 @@ function App() {
   const [youtubePlayer, setYoutubePlayer] = useState(null);
   const playerRef = React.useRef(null);
   const containerIdRef = React.useRef(`youtube-player-${Date.now()}`);
-  
+
   // Completion Sound Player
   const [completionPlayer, setCompletionPlayer] = useState(null);
   const completionPlayerRef = React.useRef(null);
   const completionContainerIdRef = React.useRef(`completion-player-${Date.now()}`);
-  
+
   // Sync ref with state
   useEffect(() => {
     repCountRef.current = repCount;
@@ -123,7 +127,7 @@ function App() {
   useEffect(() => {
     const initPlayer = () => {
       if (playerRef.current) return;
-      
+
       // Use initial sound
       const videoId = SOUNDS['sound1'].id;
       // Create container if it doesn't exist
@@ -134,7 +138,7 @@ function App() {
         container.style.display = 'none';
         document.body.appendChild(container);
       }
-      
+
       const player = new window.YT.Player(containerIdRef.current, {
         height: '0',
         width: '0',
@@ -182,7 +186,7 @@ function App() {
   useEffect(() => {
     const initCompletionPlayer = () => {
       if (completionPlayerRef.current) return;
-      
+
       // Create container if it doesn't exist
       let container = document.getElementById(completionContainerIdRef.current);
       if (!container) {
@@ -191,7 +195,7 @@ function App() {
         container.style.display = 'none';
         document.body.appendChild(container);
       }
-      
+
       try {
         const player = new window.YT.Player(completionContainerIdRef.current, {
           height: '0',
@@ -239,7 +243,7 @@ function App() {
             initCompletionPlayer();
           }
         }, 100);
-        
+
         // Cleanup interval after 10 seconds
         setTimeout(() => clearInterval(checkApi), 10000);
       }
@@ -275,16 +279,16 @@ function App() {
       try {
         const newVideoId = SOUNDS[currentSound].id;
         const shouldPlay = isSoundEnabled;
-        
+
         // Load new video
         youtubePlayer.loadVideoById({
           videoId: newVideoId,
           startSeconds: 0
         });
-        
+
         // Set loop for continuous playback
         youtubePlayer.setLoop(true);
-        
+
         // Play if sound is enabled
         if (shouldPlay) {
           // Use a small delay to ensure video is loaded
@@ -351,19 +355,19 @@ function App() {
             setIsRunning(false);
             setIsWorkSession((prevIsWork) => {
               const newIsWork = !prevIsWork;
-              
+
               if (prevIsWork) {
                 // Work session just ended - increment rep count
                 const newRepCount = repCountRef.current + 1;
                 repCountRef.current = newRepCount;
                 setRepCount(newRepCount);
-                
+
                 // Play completion sound
                 playCompletionSound();
-                
+
                 // Calculate break time: 30 minutes if repCount is a multiple of 4
                 const calculatedBreakTime = (newRepCount % 4 === 0) ? (30 * 60) : breakTime;
-                
+
                 setTimeLeft(calculatedBreakTime);
                 setTotalTime(calculatedBreakTime);
               } else {
@@ -371,7 +375,7 @@ function App() {
                 setTimeLeft(workTime);
                 setTotalTime(workTime);
               }
-              
+
               setPulse(true);
               setTimeout(() => setPulse(false), 500);
               return newIsWork;
@@ -412,10 +416,39 @@ function App() {
     setCurrentMode(mode);
     setIsRunning(false);
     setIsWorkSession(true);
-    setTimeLeft(MODES[mode].work);
-    setTotalTime(MODES[mode].work);
+
+    // Calculate new time based on mode
+    let newTime;
+    if (mode === 'custom') {
+      newTime = customWorkMinutes * 60;
+    } else {
+      newTime = MODES[mode].work;
+    }
+
+    setTimeLeft(newTime);
+    setTotalTime(newTime);
     setRepCount(0);
     repCountRef.current = 0;
+  };
+
+  const handleCustomWorkChange = (e) => {
+    const val = Math.max(1, parseInt(e.target.value) || 1);
+    setCustomWorkMinutes(val);
+    if (currentMode === 'custom' && isWorkSession) {
+      setIsRunning(false);
+      setTimeLeft(val * 60);
+      setTotalTime(val * 60);
+    }
+  };
+
+  const handleCustomBreakChange = (e) => {
+    const val = Math.max(1, parseInt(e.target.value) || 1);
+    setCustomBreakMinutes(val);
+    if (currentMode === 'custom' && !isWorkSession) {
+      setIsRunning(false);
+      setTimeLeft(val * 60);
+      setTotalTime(val * 60);
+    }
   };
 
   const handleToggleSound = () => {
@@ -460,8 +493,8 @@ function App() {
 
   return (
     <div className="App">
-      <div 
-        className="background-image" 
+      <div
+        className="background-image"
         style={{ backgroundImage: `url('${currentBgUrl}')` }}
       ></div>
 
@@ -485,18 +518,18 @@ function App() {
                 </svg>
               </button>
               <button className="icon-button" onClick={handleToggleSound}>
-              {isSoundEnabled ? (
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
-                  <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-                </svg>
-              ) : (
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
-                  <line x1="23" y1="9" x2="17" y2="15"></line>
-                  <line x1="17" y1="9" x2="23" y2="15"></line>
-                </svg>
-              )}
+                {isSoundEnabled ? (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
+                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                  </svg>
+                ) : (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
+                    <line x1="23" y1="9" x2="17" y2="15"></line>
+                    <line x1="17" y1="9" x2="23" y2="15"></line>
+                  </svg>
+                )}
               </button>
             </div>
           </div>
@@ -519,8 +552,8 @@ function App() {
                       >
                         {isLongBreakRep && (
                           <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                            <circle cx="8" cy="8" r="6"/>
-                            <path d="M8 4v4l3 2"/>
+                            <circle cx="8" cy="8" r="6" />
+                            <path d="M8 4v4l3 2" />
                           </svg>
                         )}
                       </div>
@@ -539,8 +572,8 @@ function App() {
               {formatTime(timeLeft)}
             </div>
             <div className="timer-progress">
-              <div 
-                className="progress-bar" 
+              <div
+                className="progress-bar"
                 style={{ width: `${progress}%` }}
               ></div>
             </div>
@@ -576,12 +609,44 @@ function App() {
               <div className="interval-work">50 min</div>
               <div className="interval-break">10 min break</div>
             </button>
+            <button
+              className={`interval-btn ${currentMode === 'custom' ? 'active' : ''}`}
+              onClick={() => handleModeChange('custom')}
+            >
+              <div className="interval-work">Custom</div>
+              <div className="interval-break">Set your own</div>
+            </button>
           </div>
+
+          {currentMode === 'custom' && (
+            <div className="custom-timers">
+              <div className="custom-input-group">
+                <label>Work (min)</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={customWorkMinutes}
+                  onChange={handleCustomWorkChange}
+                  className="custom-time-input"
+                />
+              </div>
+              <div className="custom-input-group">
+                <label>Break (min)</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={customBreakMinutes}
+                  onChange={handleCustomBreakChange}
+                  className="custom-time-input"
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Settings Panel */}
         {showSettings && (
-          <div 
+          <div
             className={`settings-panel glass ${showSettings ? 'show' : ''}`}
             onClick={(e) => {
               if (e.target.classList.contains('settings-panel')) {
@@ -632,7 +697,7 @@ function App() {
 
         {/* Wallpaper Picker Panel */}
         {showWallpaperPicker && (
-          <div 
+          <div
             className={`settings-panel glass ${showWallpaperPicker ? 'show' : ''}`}
             onClick={(e) => {
               if (e.target.classList.contains('settings-panel')) {
