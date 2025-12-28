@@ -21,6 +21,11 @@ const SOUNDS = {
     id: 'vWZ6hmHj2MA',
     name: 'The Great Gig in the Sky',
     description: 'Pink Floyd - Relaxing study ambiance'
+  },
+  'sound4': {
+    id: 'eKFTSSKCzWA',
+    name: 'Relaxing Northwest Waterfall',
+    description: 'Forest Bathing, Sleep, Relaxation'
   }
 };
 
