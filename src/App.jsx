@@ -3,7 +3,8 @@ import './index.css';
 
 const MODES = {
   '25-5': { work: 25 * 60, break: 5 * 60 },
-  '50-10': { work: 50 * 60, break: 10 * 60 }
+  '50-10': { work: 50 * 60, break: 10 * 60 },
+  '60-10': { work: 60 * 60, break: 10 * 60 }
 };
 
 const SOUNDS = {
