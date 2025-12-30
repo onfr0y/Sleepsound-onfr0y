@@ -27,6 +27,11 @@ const SOUNDS = {
     id: 'eKFTSSKCzWA',
     name: 'Relaxing Northwest Waterfall',
     description: 'Forest Bathing, Sleep, Relaxation'
+  },
+  'sound5': {
+    id: 'gR9f1gPpyG4',
+    name: 'Bebop - Stan Getz',
+    description: 'Jazz Classic'
   }
 };
 
