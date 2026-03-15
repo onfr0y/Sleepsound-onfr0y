@@ -180,6 +180,7 @@ function App() {
 
   // Function to save session to Supabase
   const saveSession = async () => {
+    if (!supabase) return; // Skip if Supabase is not configured
     try {
       const { data, error } = await supabase
         .from('study_sessions')
