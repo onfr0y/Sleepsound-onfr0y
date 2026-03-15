@@ -158,7 +158,6 @@ function App() {
   const currentModeRef = React.useRef(currentMode);
   const currentSoundRef = React.useRef(currentSound);
   const currentBackgroundRef = React.useRef(currentBackground);
-  const workTimeRef = React.useRef(workTime);
 
   useEffect(() => {
     currentModeRef.current = currentMode;
@@ -198,6 +197,7 @@ function App() {
       ? customMeditationMinutes * 60
       : MODES[currentMode]?.work ?? MODES['25-5'].work;
   const breakTime = currentMode === 'custom' ? customBreakMinutes * 60 : (MODES[currentMode]?.break ?? 0);
+  const workTimeRef = React.useRef(workTime);
 
   // Completion sound video ID
   const COMPLETION_SOUND_ID = '_Gukzgo-Mi4';
