@@ -154,6 +154,18 @@ function App() {
 
   const isMeditationMode = currentMode.startsWith('meditation');
 
+  // Custom timer state
+  const [customWorkMinutes, setCustomWorkMinutes] = useState(25);
+  const [customBreakMinutes, setCustomBreakMinutes] = useState(5);
+
+  const workTime = currentMode === 'custom'
+    ? customWorkMinutes * 60
+    : currentMode === 'meditation-custom'
+      ? customMeditationMinutes * 60
+      : MODES[currentMode]?.work ?? MODES['25-5'].work;
+  const breakTime = currentMode === 'custom' ? customBreakMinutes * 60 : (MODES[currentMode]?.break ?? 0);
+  const workTimeRef = React.useRef(workTime);
+
   // Track the current session's settings for logging
   const currentModeRef = React.useRef(currentMode);
   const currentSoundRef = React.useRef(currentSound);
@@ -186,18 +198,6 @@ function App() {
       console.error('Error saving session to Supabase:', error.message);
     }
   };
-
-  // Custom timer state
-  const [customWorkMinutes, setCustomWorkMinutes] = useState(25);
-  const [customBreakMinutes, setCustomBreakMinutes] = useState(5);
-
-  const workTime = currentMode === 'custom'
-    ? customWorkMinutes * 60
-    : currentMode === 'meditation-custom'
-      ? customMeditationMinutes * 60
-      : MODES[currentMode]?.work ?? MODES['25-5'].work;
-  const breakTime = currentMode === 'custom' ? customBreakMinutes * 60 : (MODES[currentMode]?.break ?? 0);
-  const workTimeRef = React.useRef(workTime);
 
   // Completion sound video ID
   const COMPLETION_SOUND_ID = '_Gukzgo-Mi4';
