@@ -653,7 +653,7 @@ function App() {
               </svg>
             </button>
             <h1 className="timer-title">
-              {isMeditationMode ? '🧘 Meditate' : isReadingMode ? '📖 Reading' : 'Study Timer'}
+              {isMeditationMode ? 'Meditate' : isReadingMode ? 'Reading' : 'Study Timer'}
             </h1>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <button className="icon-button" onClick={() => setShowWallpaperPicker(true)}>
@@ -737,7 +737,7 @@ function App() {
             {/* Pages Tracker - shown only in reading mode */}
             {isReadingMode && (
               <div className="pages-tracker">
-                <div className="pages-display">📄 {pagesRead} pages read</div>
+                <div className="pages-display">{pagesRead} pages read</div>
                 <div className="pages-input-row">
                   <input
                     type="number"
@@ -795,7 +795,7 @@ function App() {
         {/* Interval Selection Card */}
         <div className={`interval-card glass${isMeditationMode ? ' meditation-interval-card' : ''}${isReadingMode ? ' reading-interval-card' : ''}`}>
           <h3 className="interval-title">
-            {isMeditationMode ? '🧘 Meditation Duration' : isReadingMode ? '📖 Reading Duration' : 'Timer Mode'}
+            {isMeditationMode ? 'Meditation Duration' : isReadingMode ? 'Reading Duration' : 'Timer Mode'}
           </h3>
 
           {(!isMeditationMode && !isReadingMode) ? (
@@ -854,14 +854,14 @@ function App() {
                   className="interval-btn meditation-entry-btn"
                   onClick={() => handleModeChange('meditation-10')}
                 >
-                  <div className="interval-work">🧘 Meditate</div>
+                  <div className="interval-work">Meditate</div>
                   <div className="interval-break">Mindfulness mode</div>
                 </button>
                 <button
                   className="interval-btn reading-entry-btn"
                   onClick={() => handleModeChange('reading-20')}
                 >
-                  <div className="interval-work">📖 Read</div>
+                  <div className="interval-work">Read</div>
                   <div className="interval-break">Reading mode</div>
                 </button>
               </div>
@@ -917,7 +917,7 @@ function App() {
                 className="interval-btn"
                 onClick={() => handleModeChange('25-5')}
               >
-                <div className="interval-work">📚 Study</div>
+                <div className="interval-work">Study</div>
                 <div className="interval-break">Back to Pomodoro mode</div>
               </button>
             </>
@@ -972,7 +972,7 @@ function App() {
                 className="interval-btn"
                 onClick={() => handleModeChange('25-5')}
               >
-                <div className="interval-work">📚 Study</div>
+                <div className="interval-work">Study</div>
                 <div className="interval-break">Back to Pomodoro mode</div>
               </button>
             </>
