@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './index.css';
-import { supabase } from './supabase';
 
 const MODES = {
   '25-5': { work: 25 * 60, break: 5 * 60 },
@@ -164,41 +163,6 @@ function App() {
       ? customMeditationMinutes * 60
       : MODES[currentMode]?.work ?? MODES['25-5'].work;
   const breakTime = currentMode === 'custom' ? customBreakMinutes * 60 : (MODES[currentMode]?.break ?? 0);
-  const workTimeRef = React.useRef(workTime);
-
-  // Track the current session's settings for logging
-  const currentModeRef = React.useRef(currentMode);
-  const currentSoundRef = React.useRef(currentSound);
-  const currentBackgroundRef = React.useRef(currentBackground);
-
-  useEffect(() => {
-    currentModeRef.current = currentMode;
-    currentSoundRef.current = currentSound;
-    currentBackgroundRef.current = currentBackground;
-    workTimeRef.current = workTime;
-  }, [currentMode, currentSound, currentBackground, workTime]);
-
-  // Function to save session to Supabase
-  const saveSession = async () => {
-    if (!supabase) return; // Skip if Supabase is not configured
-    try {
-      const { data, error } = await supabase
-        .from('study_sessions')
-        .insert([
-          {
-            duration_minutes: Math.round(workTimeRef.current / 60),
-            mode: currentModeRef.current,
-            sound_name: SOUNDS[currentSoundRef.current]?.name || 'Unknown',
-            background_id: currentBackgroundRef.current
-          }
-        ]);
-      
-      if (error) throw error;
-      console.log('Session saved successfully:', data);
-    } catch (error) {
-      console.error('Error saving session to Supabase:', error.message);
-    }
-  };
 
   // Completion sound video ID
   const COMPLETION_SOUND_ID = '_Gukzgo-Mi4';
@@ -486,9 +450,6 @@ function App() {
 
                 // Play completion sound
                 playCompletionSound();
-
-                // Save session to Supabase
-                saveSession();
 
                 // Calculate break time: 30 minutes if repCount is a multiple of 4
                 const calculatedBreakTime = (newRepCount % 4 === 0) ? (30 * 60) : breakTime;
