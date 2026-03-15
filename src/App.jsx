@@ -65,29 +65,14 @@ const BREATH_LABELS = ['Inhale', 'Hold', 'Exhale', 'Rest'];
 
 const SOUNDS = {
   'sound1': {
-    id: 'pQI64hD2sJw',
-    name: '40 HZ Binaural beat/s',
-    description: '"FOCUS & CONCE nNTRsdsd ATION" with Dr. Andrew Huberman'
-  },
-  'sound2': {
     id: 'nMfPqeZjc2c',
     name: 'White Noise',
     description: 'Background ambient sound'
   },
-  'sound3': {
-    id: 'vWZ6hmHj2MA',
-    name: 'The Great Gig in the Sky',
-    description: 'Pink Floyd - Relaxing study ambiance'
-  },
-  'sound4': {
-    id: 'eKFTSSKCzWA',
-    name: 'Relaxing Northwest Waterfall',
-    description: 'Forest Bathing, Sleep, Relaxation'
-  },
-  'sound5': {
-    id: 'gR9f1gPpyG4',
-    name: 'Bebop - Stan Getz',
-    description: 'Jazz Classic'
+  'sound2': {
+    id: 'ca3fBRmmrBA',
+    name: 'Study Music',
+    description: 'Focus and relax'
   }
 };
 
