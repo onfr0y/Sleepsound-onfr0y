@@ -1,11 +1,42 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './index.css';
+import { supabase } from './supabase';
 
 const MODES = {
   '25-5': { work: 25 * 60, break: 5 * 60 },
   '50-10': { work: 50 * 60, break: 10 * 60 },
-  '60-10': { work: 60 * 60, break: 10 * 60 }
+  '60-10': { work: 60 * 60, break: 10 * 60 },
+  'meditation-10': { work: 10 * 60, break: 0 },
+  'meditation-20': { work: 20 * 60, break: 0 },
+  'meditation-custom': { work: 10 * 60, break: 0 },
 };
+
+const MEDITATION_SOUNDS = {
+  'med1': {
+    id: 'FOwCCvHEfY0',
+    name: '432Hz – Healing Tones',
+    description: 'Deep meditation & inner peace'
+  },
+  'med2': {
+    id: 'lFcSrYw-ARY',
+    name: 'Tibetan Singing Bowls',
+    description: 'Chakra cleansing & relaxation'
+  },
+  'med3': {
+    id: 'eKFTSSKCzWA',
+    name: 'Forest Rain',
+    description: 'Gentle rain sounds for mindfulness'
+  },
+  'med4': {
+    id: '77ZozI0rw7w',
+    name: 'Theta Waves 6Hz',
+    description: 'Deep meditation, creativity & intuition'
+  },
+};
+
+// Breathing cycle phases in seconds: [inhale, hold, exhale, hold]
+const BREATH_CYCLE = [4, 4, 6, 2]; // Box breathing variant
+const BREATH_LABELS = ['Inhale', 'Hold', 'Exhale', 'Rest'];
 
 const SOUNDS = {
   'sound1': {
@@ -114,12 +145,59 @@ function App() {
   const [repCount, setRepCount] = useState(0);
   const repCountRef = React.useRef(0);
 
+  // Meditation state
+  const [customMeditationMinutes, setCustomMeditationMinutes] = useState(10);
+  const [breathPhaseIndex, setBreathPhaseIndex] = useState(0);
+  const [breathSecondsLeft, setBreathSecondsLeft] = useState(BREATH_CYCLE[0]);
+  const breathPhaseRef = useRef(0);
+  const breathSecondsRef = useRef(BREATH_CYCLE[0]);
+
+  const isMeditationMode = currentMode.startsWith('meditation');
+
+  // Track the current session's settings for logging
+  const currentModeRef = React.useRef(currentMode);
+  const currentSoundRef = React.useRef(currentSound);
+  const currentBackgroundRef = React.useRef(currentBackground);
+  const workTimeRef = React.useRef(workTime);
+
+  useEffect(() => {
+    currentModeRef.current = currentMode;
+    currentSoundRef.current = currentSound;
+    currentBackgroundRef.current = currentBackground;
+    workTimeRef.current = workTime;
+  }, [currentMode, currentSound, currentBackground, workTime]);
+
+  // Function to save session to Supabase
+  const saveSession = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('study_sessions')
+        .insert([
+          {
+            duration_minutes: Math.round(workTimeRef.current / 60),
+            mode: currentModeRef.current,
+            sound_name: SOUNDS[currentSoundRef.current]?.name || 'Unknown',
+            background_id: currentBackgroundRef.current
+          }
+        ]);
+      
+      if (error) throw error;
+      console.log('Session saved successfully:', data);
+    } catch (error) {
+      console.error('Error saving session to Supabase:', error.message);
+    }
+  };
+
   // Custom timer state
   const [customWorkMinutes, setCustomWorkMinutes] = useState(25);
   const [customBreakMinutes, setCustomBreakMinutes] = useState(5);
 
-  const workTime = currentMode === 'custom' ? customWorkMinutes * 60 : MODES[currentMode].work;
-  const breakTime = currentMode === 'custom' ? customBreakMinutes * 60 : MODES[currentMode].break;
+  const workTime = currentMode === 'custom'
+    ? customWorkMinutes * 60
+    : currentMode === 'meditation-custom'
+      ? customMeditationMinutes * 60
+      : MODES[currentMode]?.work ?? MODES['25-5'].work;
+  const breakTime = currentMode === 'custom' ? customBreakMinutes * 60 : (MODES[currentMode]?.break ?? 0);
 
   // Completion sound video ID
   const COMPLETION_SOUND_ID = '_Gukzgo-Mi4';
@@ -360,6 +438,24 @@ function App() {
     }
   };
 
+  // Breathing guide logic (only in meditation mode)
+  useEffect(() => {
+    if (!isMeditationMode || !isRunning) return;
+    const interval = setInterval(() => {
+      breathSecondsRef.current -= 1;
+      if (breathSecondsRef.current <= 0) {
+        const nextPhase = (breathPhaseRef.current + 1) % BREATH_CYCLE.length;
+        breathPhaseRef.current = nextPhase;
+        breathSecondsRef.current = BREATH_CYCLE[nextPhase];
+        setBreathPhaseIndex(nextPhase);
+        setBreathSecondsLeft(BREATH_CYCLE[nextPhase]);
+      } else {
+        setBreathSecondsLeft(breathSecondsRef.current);
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isMeditationMode, isRunning]);
+
   // Timer logic
   useEffect(() => {
     let interval = null;
@@ -367,7 +463,16 @@ function App() {
       interval = setInterval(() => {
         setTimeLeft((prev) => {
           if (prev <= 1) {
-            // Session finished
+            if (isMeditationMode) {
+              // Meditation session done – just stop and play sound
+              setIsRunning(false);
+              playCompletionSound();
+              setPulse(true);
+              setTimeout(() => setPulse(false), 500);
+              return 0;
+            }
+
+            // Study session finished
             setIsRunning(false);
             setIsWorkSession((prevIsWork) => {
               const newIsWork = !prevIsWork;
@@ -380,6 +485,9 @@ function App() {
 
                 // Play completion sound
                 playCompletionSound();
+
+                // Save session to Supabase
+                saveSession();
 
                 // Calculate break time: 30 minutes if repCount is a multiple of 4
                 const calculatedBreakTime = (newRepCount % 4 === 0) ? (30 * 60) : breakTime;
@@ -405,7 +513,7 @@ function App() {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isRunning, timeLeft, workTime, breakTime, completionPlayer]);
+  }, [isRunning, timeLeft, workTime, breakTime, completionPlayer, isMeditationMode]);
 
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -426,6 +534,11 @@ function App() {
     setTotalTime(workTime);
     setRepCount(0);
     repCountRef.current = 0;
+    // Reset breathing guide
+    breathPhaseRef.current = 0;
+    breathSecondsRef.current = BREATH_CYCLE[0];
+    setBreathPhaseIndex(0);
+    setBreathSecondsLeft(BREATH_CYCLE[0]);
   };
 
   const handleModeChange = (mode) => {
@@ -433,18 +546,31 @@ function App() {
     setIsRunning(false);
     setIsWorkSession(true);
 
+    // Reset breathing guide
+    breathPhaseRef.current = 0;
+    breathSecondsRef.current = BREATH_CYCLE[0];
+    setBreathPhaseIndex(0);
+    setBreathSecondsLeft(BREATH_CYCLE[0]);
+
     // Calculate new time based on mode
     let newTime;
     if (mode === 'custom') {
       newTime = customWorkMinutes * 60;
+    } else if (mode === 'meditation-custom') {
+      newTime = customMeditationMinutes * 60;
     } else {
-      newTime = MODES[mode].work;
+      newTime = MODES[mode]?.work ?? MODES['25-5'].work;
     }
 
     setTimeLeft(newTime);
     setTotalTime(newTime);
     setRepCount(0);
     repCountRef.current = 0;
+
+    // Switch to a calming sound when entering meditation mode
+    if (mode.startsWith('meditation') && !currentSound.startsWith('med')) {
+      setCurrentSound('med1');
+    }
   };
 
   const handleCustomWorkChange = (e) => {
@@ -507,8 +633,11 @@ function App() {
     setShowWallpaperPicker(false);
   };
 
+  // Active sounds list: merge SOUNDS + MEDITATION_SOUNDS based on mode
+  const activeSounds = isMeditationMode ? MEDITATION_SOUNDS : SOUNDS;
+
   return (
-    <div className="App">
+    <div className={`App${isMeditationMode ? ' meditation-active' : ''}`}>
       <div
         className="background-image"
         style={{ backgroundImage: `url('${currentBgUrl}')` }}
@@ -516,7 +645,7 @@ function App() {
 
       <div className="container">
         {/* Main Timer Card */}
-        <div className="timer-card glass">
+        <div className={`timer-card glass${isMeditationMode ? ' meditation-card' : ''}`}>
           <div className="timer-header">
             <button className="icon-button" onClick={() => setShowSettings(true)}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -524,7 +653,7 @@ function App() {
                 <path d="M12 1v6m0 6v6m9-9h-6m-6 0H3m15.364 6.364l-4.243-4.243m-4.242 0L5.636 17.364m12.728 0l-4.243-4.243m-4.242 0L5.636 6.636"></path>
               </svg>
             </button>
-            <h1 className="timer-title">Study Timer</h1>
+            <h1 className="timer-title">{isMeditationMode ? '🧘 Meditate' : 'Study Timer'}</h1>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <button className="icon-button" onClick={() => setShowWallpaperPicker(true)}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -552,44 +681,59 @@ function App() {
 
           <div className="timer-display-container">
             <div className="session-indicator">
-              <span>{isWorkSession ? 'Work' : 'Break'}</span>
-              <div className="rep-indicator">
-                <div className="rep-circles">
-                  {[1, 2, 3, 4].map((circleNum) => {
-                    // Calculate completed reps in current cycle (1-4)
-                    const completedInCycle = repCount % 4 === 0 ? (repCount > 0 ? 4 : 0) : repCount % 4;
-                    const isFilled = circleNum <= completedInCycle;
-                    const isLongBreakRep = circleNum === 4;
-                    return (
-                      <div
-                        key={circleNum}
-                        className={`rep-circle ${isFilled ? 'filled' : ''} ${isLongBreakRep ? 'long-break' : ''}`}
-                        title={isLongBreakRep ? 'Long break after this rep' : `Rep ${circleNum}`}
-                      >
-                        {isLongBreakRep && (
-                          <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                            <circle cx="8" cy="8" r="6" />
-                            <path d="M8 4v4l3 2" />
-                          </svg>
-                        )}
-                      </div>
-                    );
-                  })}
+              {isMeditationMode ? (
+                <span className="meditation-label">Meditate</span>
+              ) : (
+                <span>{isWorkSession ? 'Work' : 'Break'}</span>
+              )}
+              {!isMeditationMode && (
+                <div className="rep-indicator">
+                  <div className="rep-circles">
+                    {[1, 2, 3, 4].map((circleNum) => {
+                      const completedInCycle = repCount % 4 === 0 ? (repCount > 0 ? 4 : 0) : repCount % 4;
+                      const isFilled = circleNum <= completedInCycle;
+                      const isLongBreakRep = circleNum === 4;
+                      return (
+                        <div
+                          key={circleNum}
+                          className={`rep-circle ${isFilled ? 'filled' : ''} ${isLongBreakRep ? 'long-break' : ''}`}
+                          title={isLongBreakRep ? 'Long break after this rep' : `Rep ${circleNum}`}
+                        >
+                          {isLongBreakRep && (
+                            <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                              <circle cx="8" cy="8" r="6" />
+                              <path d="M8 4v4l3 2" />
+                            </svg>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {repCount > 0 && (
+                    <span className="rep-text">
+                      Rep {repCount}
+                      {repCount % 4 === 0 && !isWorkSession && ' • Long Break (30 min)'}
+                    </span>
+                  )}
                 </div>
-                {repCount > 0 && (
-                  <span className="rep-text">
-                    Rep {repCount}
-                    {repCount % 4 === 0 && !isWorkSession && ' • Long Break (30 min)'}
-                  </span>
-                )}
-              </div>
+              )}
             </div>
             <div className={`timer-display ${pulse ? 'pulse' : ''}`}>
               {formatTime(timeLeft)}
             </div>
+            {/* Breathing guide – shown only in meditation mode */}
+            {isMeditationMode && (
+              <div className={`breath-guide breath-${BREATH_LABELS[breathPhaseIndex].toLowerCase()}`}>
+                <div className={`breath-orb ${isRunning ? `breath-${BREATH_LABELS[breathPhaseIndex].toLowerCase()}` : ''}`}></div>
+                <div className="breath-text">
+                  <span className="breath-label">{BREATH_LABELS[breathPhaseIndex]}</span>
+                  <span className="breath-seconds">{breathSecondsLeft}s</span>
+                </div>
+              </div>
+            )}
             <div className="timer-progress">
               <div
-                className="progress-bar"
+                className={`progress-bar${isMeditationMode ? ' meditation-progress' : ''}`}
                 style={{ width: `${progress}%` }}
               ></div>
             </div>
@@ -608,55 +752,123 @@ function App() {
         </div>
 
         {/* Interval Selection Card */}
-        <div className="interval-card glass">
-          <h3 className="interval-title">Timer Mode</h3>
-          <div className="interval-options">
-            <button
-              className={`interval-btn ${currentMode === '25-5' ? 'active' : ''}`}
-              onClick={() => handleModeChange('25-5')}
-            >
-              <div className="interval-work">25 min</div>
-              <div className="interval-break">5 min break</div>
-            </button>
-            <button
-              className={`interval-btn ${currentMode === '50-10' ? 'active' : ''}`}
-              onClick={() => handleModeChange('50-10')}
-            >
-              <div className="interval-work">50 min</div>
-              <div className="interval-break">10 min break</div>
-            </button>
-            <button
-              className={`interval-btn ${currentMode === 'custom' ? 'active' : ''}`}
-              onClick={() => handleModeChange('custom')}
-            >
-              <div className="interval-work">Custom</div>
-              <div className="interval-break">Set your own</div>
-            </button>
-          </div>
+        <div className={`interval-card glass${isMeditationMode ? ' meditation-interval-card' : ''}`}>
+          <h3 className="interval-title">{isMeditationMode ? '🧘 Meditation Duration' : 'Timer Mode'}</h3>
 
-          {currentMode === 'custom' && (
-            <div className="custom-timers">
-              <div className="custom-input-group">
-                <label>Work (min)</label>
-                <input
-                  type="number"
-                  min="1"
-                  value={customWorkMinutes}
-                  onChange={handleCustomWorkChange}
-                  className="custom-time-input"
-                />
+          {!isMeditationMode ? (
+            <>
+              <div className="interval-options">
+                <button
+                  className={`interval-btn ${currentMode === '25-5' ? 'active' : ''}`}
+                  onClick={() => handleModeChange('25-5')}
+                >
+                  <div className="interval-work">25 min</div>
+                  <div className="interval-break">5 min break</div>
+                </button>
+                <button
+                  className={`interval-btn ${currentMode === '50-10' ? 'active' : ''}`}
+                  onClick={() => handleModeChange('50-10')}
+                >
+                  <div className="interval-work">50 min</div>
+                  <div className="interval-break">10 min break</div>
+                </button>
+                <button
+                  className={`interval-btn ${currentMode === 'custom' ? 'active' : ''}`}
+                  onClick={() => handleModeChange('custom')}
+                >
+                  <div className="interval-work">Custom</div>
+                  <div className="interval-break">Set your own</div>
+                </button>
               </div>
-              <div className="custom-input-group">
-                <label>Break (min)</label>
-                <input
-                  type="number"
-                  min="1"
-                  value={customBreakMinutes}
-                  onChange={handleCustomBreakChange}
-                  className="custom-time-input"
-                />
+              {currentMode === 'custom' && (
+                <div className="custom-timers">
+                  <div className="custom-input-group">
+                    <label>Work (min)</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={customWorkMinutes}
+                      onChange={handleCustomWorkChange}
+                      className="custom-time-input"
+                    />
+                  </div>
+                  <div className="custom-input-group">
+                    <label>Break (min)</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={customBreakMinutes}
+                      onChange={handleCustomBreakChange}
+                      className="custom-time-input"
+                    />
+                  </div>
+                </div>
+              )}
+              {/* Divider + Meditation entry */}
+              <div className="mode-divider"><span>or</span></div>
+              <button
+                className="interval-btn meditation-entry-btn"
+                onClick={() => handleModeChange('meditation-10')}
+              >
+                <div className="interval-work">🧘 Meditate</div>
+                <div className="interval-break">Switch to mindfulness mode</div>
+              </button>
+            </>
+          ) : (
+            <>
+              <div className="interval-options">
+                <button
+                  className={`interval-btn meditation-btn ${currentMode === 'meditation-10' ? 'active' : ''}`}
+                  onClick={() => handleModeChange('meditation-10')}
+                >
+                  <div className="interval-work">10 min</div>
+                  <div className="interval-break">Short session</div>
+                </button>
+                <button
+                  className={`interval-btn meditation-btn ${currentMode === 'meditation-20' ? 'active' : ''}`}
+                  onClick={() => handleModeChange('meditation-20')}
+                >
+                  <div className="interval-work">20 min</div>
+                  <div className="interval-break">Standard session</div>
+                </button>
+                <button
+                  className={`interval-btn meditation-btn ${currentMode === 'meditation-custom' ? 'active' : ''}`}
+                  onClick={() => handleModeChange('meditation-custom')}
+                >
+                  <div className="interval-work">Custom</div>
+                  <div className="interval-break">Set your own</div>
+                </button>
               </div>
-            </div>
+              {currentMode === 'meditation-custom' && (
+                <div className="custom-timers">
+                  <div className="custom-input-group">
+                    <label>Duration (min)</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={customMeditationMinutes}
+                      onChange={(e) => {
+                        const val = Math.max(1, parseInt(e.target.value) || 1);
+                        setCustomMeditationMinutes(val);
+                        setIsRunning(false);
+                        setTimeLeft(val * 60);
+                        setTotalTime(val * 60);
+                      }}
+                      className="custom-time-input"
+                    />
+                  </div>
+                </div>
+              )}
+              {/* Divider + back to Study */}
+              <div className="mode-divider"><span>or</span></div>
+              <button
+                className="interval-btn"
+                onClick={() => handleModeChange('25-5')}
+              >
+                <div className="interval-work">📚 Study</div>
+                <div className="interval-break">Back to Pomodoro mode</div>
+              </button>
+            </>
           )}
         </div>
 
@@ -681,9 +893,9 @@ function App() {
             </div>
             <div className="settings-content">
               <div className="setting-item">
-                <label>Background Sound</label>
+                <label>{isMeditationMode ? 'Meditation Sound' : 'Background Sound'}</label>
                 <div className="sound-options">
-                  {Object.entries(SOUNDS).map(([key, sound]) => (
+                  {Object.entries(activeSounds).map(([key, sound]) => (
                     <button
                       key={key}
                       className={`sound-option-btn ${currentSound === key ? 'active' : ''}`}
