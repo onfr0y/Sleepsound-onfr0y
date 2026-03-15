@@ -8,6 +8,9 @@ const MODES = {
   'meditation-10': { work: 10 * 60, break: 0 },
   'meditation-20': { work: 20 * 60, break: 0 },
   'meditation-custom': { work: 10 * 60, break: 0 },
+  'reading-20': { work: 20 * 60, break: 0 },
+  'reading-30': { work: 30 * 60, break: 0 },
+  'reading-custom': { work: 20 * 60, break: 0 },
 };
 
 const MEDITATION_SOUNDS = {
@@ -30,6 +33,29 @@ const MEDITATION_SOUNDS = {
     id: '77ZozI0rw7w',
     name: 'Theta Waves 6Hz',
     description: 'Deep meditation, creativity & intuition'
+  },
+};
+
+const READING_SOUNDS = {
+  'read1': {
+    id: 'I-s4OOweAEE',
+    name: 'Library Ambience',
+    description: 'Quiet library with page turning & distant rain'
+  },
+  'read2': {
+    id: 'DWcJFNfaw9c',
+    name: 'Lofi Hip Hop chill',
+    description: 'Beats to relax/study to'
+  },
+  'read3': {
+    id: '5qap5aO4i9A',
+    name: 'Cozy Coffee Shop',
+    description: 'Rainy window and jazz in a cafe'
+  },
+  'read4': {
+    id: 'MCkTebktZVc',
+    name: 'Hogwarts Library Room',
+    description: 'Harry Potter ambient soundscape'
   },
 };
 
@@ -151,7 +177,13 @@ function App() {
   const breathPhaseRef = useRef(0);
   const breathSecondsRef = useRef(BREATH_CYCLE[0]);
 
+  // Reading state
+  const [pagesRead, setPagesRead] = useState(0);
+  const [currentPageInput, setCurrentPageInput] = useState('');
+  const [customReadingMinutes, setCustomReadingMinutes] = useState(20);
+
   const isMeditationMode = currentMode.startsWith('meditation');
+  const isReadingMode = currentMode.startsWith('reading');
 
   // Custom timer state
   const [customWorkMinutes, setCustomWorkMinutes] = useState(25);
@@ -161,7 +193,9 @@ function App() {
     ? customWorkMinutes * 60
     : currentMode === 'meditation-custom'
       ? customMeditationMinutes * 60
-      : MODES[currentMode]?.work ?? MODES['25-5'].work;
+      : currentMode === 'reading-custom'
+        ? customReadingMinutes * 60
+        : MODES[currentMode]?.work ?? MODES['25-5'].work;
   const breakTime = currentMode === 'custom' ? customBreakMinutes * 60 : (MODES[currentMode]?.break ?? 0);
 
   // Completion sound video ID
@@ -501,6 +535,11 @@ function App() {
     breathSecondsRef.current = BREATH_CYCLE[0];
     setBreathPhaseIndex(0);
     setBreathSecondsLeft(BREATH_CYCLE[0]);
+    // Reset reading tracker if in reading mode
+    if (isReadingMode) {
+      setPagesRead(0);
+      setCurrentPageInput('');
+    }
   };
 
   const handleModeChange = (mode) => {
@@ -514,12 +553,18 @@ function App() {
     setBreathPhaseIndex(0);
     setBreathSecondsLeft(BREATH_CYCLE[0]);
 
+    // Reset reading tracker
+    setPagesRead(0);
+    setCurrentPageInput('');
+
     // Calculate new time based on mode
     let newTime;
     if (mode === 'custom') {
       newTime = customWorkMinutes * 60;
     } else if (mode === 'meditation-custom') {
       newTime = customMeditationMinutes * 60;
+    } else if (mode === 'reading-custom') {
+      newTime = customReadingMinutes * 60;
     } else {
       newTime = MODES[mode]?.work ?? MODES['25-5'].work;
     }
@@ -529,9 +574,11 @@ function App() {
     setRepCount(0);
     repCountRef.current = 0;
 
-    // Switch to a calming sound when entering meditation mode
+    // Switch to a calming sound when entering meditation/reading modes
     if (mode.startsWith('meditation') && !currentSound.startsWith('med')) {
       setCurrentSound('med1');
+    } else if (mode.startsWith('reading') && !currentSound.startsWith('read')) {
+      setCurrentSound('read1');
     }
   };
 
@@ -595,11 +642,11 @@ function App() {
     setShowWallpaperPicker(false);
   };
 
-  // Active sounds list: merge SOUNDS + MEDITATION_SOUNDS based on mode
-  const activeSounds = isMeditationMode ? MEDITATION_SOUNDS : SOUNDS;
+  // Active sounds list: merge SOUNDS + specific mode sounds
+  const activeSounds = isMeditationMode ? MEDITATION_SOUNDS : isReadingMode ? READING_SOUNDS : SOUNDS;
 
   return (
-    <div className={`App${isMeditationMode ? ' meditation-active' : ''}`}>
+    <div className={`App${isMeditationMode ? ' meditation-active' : ''}${isReadingMode ? ' reading-active' : ''}`}>
       <div
         className="background-image"
         style={{ backgroundImage: `url('${currentBgUrl}')` }}
@@ -607,7 +654,7 @@ function App() {
 
       <div className="container">
         {/* Main Timer Card */}
-        <div className={`timer-card glass${isMeditationMode ? ' meditation-card' : ''}`}>
+        <div className={`timer-card glass${isMeditationMode ? ' meditation-card' : ''}${isReadingMode ? ' reading-card' : ''}`}>
           <div className="timer-header">
             <button className="icon-button" onClick={() => setShowSettings(true)}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -615,7 +662,9 @@ function App() {
                 <path d="M12 1v6m0 6v6m9-9h-6m-6 0H3m15.364 6.364l-4.243-4.243m-4.242 0L5.636 17.364m12.728 0l-4.243-4.243m-4.242 0L5.636 6.636"></path>
               </svg>
             </button>
-            <h1 className="timer-title">{isMeditationMode ? '🧘 Meditate' : 'Study Timer'}</h1>
+            <h1 className="timer-title">
+              {isMeditationMode ? '🧘 Meditate' : isReadingMode ? '📖 Reading' : 'Study Timer'}
+            </h1>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <button className="icon-button" onClick={() => setShowWallpaperPicker(true)}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -645,10 +694,12 @@ function App() {
             <div className="session-indicator">
               {isMeditationMode ? (
                 <span className="meditation-label">Meditate</span>
+              ) : isReadingMode ? (
+                <span className="reading-label">Read</span>
               ) : (
                 <span>{isWorkSession ? 'Work' : 'Break'}</span>
               )}
-              {!isMeditationMode && (
+              {(!isMeditationMode && !isReadingMode) && (
                 <div className="rep-indicator">
                   <div className="rep-circles">
                     {[1, 2, 3, 4].map((circleNum) => {
@@ -693,9 +744,47 @@ function App() {
                 </div>
               </div>
             )}
+            {/* Pages Tracker - shown only in reading mode */}
+            {isReadingMode && (
+              <div className="pages-tracker">
+                <div className="pages-display">📄 {pagesRead} pages read</div>
+                <div className="pages-input-row">
+                  <input
+                    type="number"
+                    min="1"
+                    placeholder="+"
+                    className="pages-input"
+                    value={currentPageInput}
+                    onChange={(e) => setCurrentPageInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        const val = parseInt(currentPageInput);
+                        if (!isNaN(val) && val > 0) {
+                          setPagesRead(prev => prev + val);
+                          setCurrentPageInput('');
+                        }
+                      }
+                    }}
+                  />
+                  <button 
+                    className="pages-add-btn"
+                    onClick={() => {
+                      const val = parseInt(currentPageInput);
+                      if (!isNaN(val) && val > 0) {
+                        setPagesRead(prev => prev + val);
+                        setCurrentPageInput('');
+                      }
+                    }}
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="timer-progress">
               <div
-                className={`progress-bar${isMeditationMode ? ' meditation-progress' : ''}`}
+                className={`progress-bar${isMeditationMode ? ' meditation-progress' : ''}${isReadingMode ? ' reading-progress' : ''}`}
                 style={{ width: `${progress}%` }}
               ></div>
             </div>
@@ -714,10 +803,12 @@ function App() {
         </div>
 
         {/* Interval Selection Card */}
-        <div className={`interval-card glass${isMeditationMode ? ' meditation-interval-card' : ''}`}>
-          <h3 className="interval-title">{isMeditationMode ? '🧘 Meditation Duration' : 'Timer Mode'}</h3>
+        <div className={`interval-card glass${isMeditationMode ? ' meditation-interval-card' : ''}${isReadingMode ? ' reading-interval-card' : ''}`}>
+          <h3 className="interval-title">
+            {isMeditationMode ? '🧘 Meditation Duration' : isReadingMode ? '📖 Reading Duration' : 'Timer Mode'}
+          </h3>
 
-          {!isMeditationMode ? (
+          {(!isMeditationMode && !isReadingMode) ? (
             <>
               <div className="interval-options">
                 <button
@@ -766,17 +857,26 @@ function App() {
                   </div>
                 </div>
               )}
-              {/* Divider + Meditation entry */}
+              {/* Divider + Meditation & Reading entry */}
               <div className="mode-divider"><span>or</span></div>
-              <button
-                className="interval-btn meditation-entry-btn"
-                onClick={() => handleModeChange('meditation-10')}
-              >
-                <div className="interval-work">🧘 Meditate</div>
-                <div className="interval-break">Switch to mindfulness mode</div>
-              </button>
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <button
+                  className="interval-btn meditation-entry-btn"
+                  onClick={() => handleModeChange('meditation-10')}
+                >
+                  <div className="interval-work">🧘 Meditate</div>
+                  <div className="interval-break">Mindfulness mode</div>
+                </button>
+                <button
+                  className="interval-btn reading-entry-btn"
+                  onClick={() => handleModeChange('reading-20')}
+                >
+                  <div className="interval-work">📖 Read</div>
+                  <div className="interval-break">Reading mode</div>
+                </button>
+              </div>
             </>
-          ) : (
+          ) : isMeditationMode ? (
             <>
               <div className="interval-options">
                 <button
@@ -831,6 +931,61 @@ function App() {
                 <div className="interval-break">Back to Pomodoro mode</div>
               </button>
             </>
+          ) : (
+            <>
+              <div className="interval-options">
+                <button
+                  className={`interval-btn reading-btn ${currentMode === 'reading-20' ? 'active' : ''}`}
+                  onClick={() => handleModeChange('reading-20')}
+                >
+                  <div className="interval-work">20 min</div>
+                  <div className="interval-break">Short read</div>
+                </button>
+                <button
+                  className={`interval-btn reading-btn ${currentMode === 'reading-30' ? 'active' : ''}`}
+                  onClick={() => handleModeChange('reading-30')}
+                >
+                  <div className="interval-work">30 min</div>
+                  <div className="interval-break">Standard read</div>
+                </button>
+                <button
+                  className={`interval-btn reading-btn ${currentMode === 'reading-custom' ? 'active' : ''}`}
+                  onClick={() => handleModeChange('reading-custom')}
+                >
+                  <div className="interval-work">Custom</div>
+                  <div className="interval-break">Set your own</div>
+                </button>
+              </div>
+              {currentMode === 'reading-custom' && (
+                <div className="custom-timers">
+                  <div className="custom-input-group">
+                    <label>Duration (min)</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={customReadingMinutes}
+                      onChange={(e) => {
+                        const val = Math.max(1, parseInt(e.target.value) || 1);
+                        setCustomReadingMinutes(val);
+                        setIsRunning(false);
+                        setTimeLeft(val * 60);
+                        setTotalTime(val * 60);
+                      }}
+                      className="custom-time-input"
+                    />
+                  </div>
+                </div>
+              )}
+              {/* Divider + back to Study */}
+              <div className="mode-divider"><span>or</span></div>
+              <button
+                className="interval-btn"
+                onClick={() => handleModeChange('25-5')}
+              >
+                <div className="interval-work">📚 Study</div>
+                <div className="interval-break">Back to Pomodoro mode</div>
+              </button>
+            </>
           )}
         </div>
 
@@ -855,7 +1010,9 @@ function App() {
             </div>
             <div className="settings-content">
               <div className="setting-item">
-                <label>{isMeditationMode ? 'Meditation Sound' : 'Background Sound'}</label>
+                <label>
+                  {isMeditationMode ? 'Meditation Sound' : isReadingMode ? 'Reading Sound' : 'Background Sound'}
+                </label>
                 <div className="sound-options">
                   {Object.entries(activeSounds).map(([key, sound]) => (
                     <button
