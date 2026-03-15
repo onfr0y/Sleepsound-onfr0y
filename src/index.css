@@ -850,3 +850,159 @@ body {
     from { opacity: 0; transform: translateY(-10px); }
     to { opacity: 1; transform: translateY(0); }
 }
+
+/* ─── Meditation Mode ──────────────────────────────────────────── */
+
+/* Gentle purple/lavender tint on meditation cards */
+.meditation-card {
+    border-color: rgba(196, 167, 255, 0.5) !important;
+    box-shadow:
+        0 8px 32px rgba(150, 100, 255, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3),
+        inset 0 -1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+.meditation-interval-card {
+    border-color: rgba(196, 167, 255, 0.4) !important;
+}
+
+/* Meditation session label */
+.meditation-label {
+    font-size: 0.9rem;
+    color: rgba(196, 167, 255, 0.9);
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    font-weight: 600;
+}
+
+/* Progress bar in meditation mode: lavender hue */
+.meditation-progress {
+    background: linear-gradient(90deg, rgba(196, 167, 255, 0.9), rgba(160, 120, 255, 0.6)) !important;
+    box-shadow: 0 0 10px rgba(196, 167, 255, 0.5) !important;
+}
+
+/* Meditation entry button styling */
+.meditation-entry-btn {
+    width: 100%;
+    margin-top: 0.5rem;
+    background: rgba(196, 167, 255, 0.1) !important;
+    border-color: rgba(196, 167, 255, 0.4) !important;
+}
+
+.meditation-entry-btn:hover {
+    background: rgba(196, 167, 255, 0.2) !important;
+    border-color: rgba(196, 167, 255, 0.7) !important;
+}
+
+/* Meditation duration button */
+.meditation-btn.active {
+    background: rgba(196, 167, 255, 0.2) !important;
+    border-color: rgba(196, 167, 255, 0.7) !important;
+    box-shadow:
+        0 4px 20px rgba(196, 167, 255, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.35) !important;
+}
+
+/* Mode divider "or" separator */
+.mode-divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 1rem 0 0.5rem;
+    gap: 0.75rem;
+}
+
+.mode-divider::before,
+.mode-divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.mode-divider span {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    opacity: 0.6;
+}
+
+/* ─── Breathing Guide ──────────────────────────────────────────── */
+.breath-guide {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 1.25rem 0 0.5rem;
+    animation: fadeIn 0.5s ease;
+}
+
+.breath-orb {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%,
+        rgba(196, 167, 255, 0.7),
+        rgba(140, 100, 240, 0.4)
+    );
+    border: 2px solid rgba(196, 167, 255, 0.5);
+    box-shadow:
+        0 0 20px rgba(196, 167, 255, 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    transition: transform 0.4s ease, box-shadow 0.4s ease;
+}
+
+/* Inhale – orb expands */
+.breath-orb.breath-inhale {
+    animation: breath-expand 4s linear forwards;
+}
+
+/* Hold (after inhale) – stay large */
+.breath-orb.breath-hold {
+    transform: scale(1.35);
+    box-shadow:
+        0 0 30px rgba(196, 167, 255, 0.55),
+        inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+/* Exhale – orb contracts */
+.breath-orb.breath-exhale {
+    animation: breath-contract 6s linear forwards;
+}
+
+/* Rest – stay small */
+.breath-orb.breath-rest {
+    transform: scale(0.85);
+    opacity: 0.7;
+}
+
+@keyframes breath-expand {
+    from { transform: scale(0.85); }
+    to   { transform: scale(1.35); }
+}
+
+@keyframes breath-contract {
+    from { transform: scale(1.35); }
+    to   { transform: scale(0.85); }
+}
+
+.breath-text {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.15rem;
+}
+
+.breath-label {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: rgba(196, 167, 255, 0.95);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.breath-seconds {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
