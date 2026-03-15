@@ -73,6 +73,11 @@ const SOUNDS = {
     id: 'ca3fBRmmrBA',
     name: 'Study Music',
     description: 'Focus and relax'
+  },
+  'sound3': {
+    id: 'pQI64hD2sJw',
+    name: '40 HZ Binaural beat/s',
+    description: '"FOCUS & CONCENTRATION" with Dr. Andrew Huberman'
   }
 };
 
