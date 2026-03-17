@@ -756,7 +756,7 @@ function App() {
                       }
                     }}
                   />
-                  <button 
+                  <button
                     className="pages-add-btn"
                     onClick={() => {
                       const val = parseInt(currentPageInput);
@@ -849,7 +849,7 @@ function App() {
               )}
               {/* Divider + Meditation & Reading entry */}
               <div className="mode-divider"><span>or</span></div>
-              <div style={{ display: 'flex', gap: '1rem' }}>
+              <div className="mode-entry-row">
                 <button
                   className="interval-btn meditation-entry-btn"
                   onClick={() => handleModeChange('meditation-10')}
