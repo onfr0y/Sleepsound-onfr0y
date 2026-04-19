@@ -4,24 +4,6 @@ import { Settings, Image as ImageIcon, Volume2, VolumeX, ListTodo, Play, Pause, 
 import TaskTracker from './TaskTracker';
 import './index.css';
 
-const SOUND_CATEGORIES = [
-  { name: 'Focus', sounds: SOUNDS },
-  { name: 'Meditation', sounds: MEDITATION_SOUNDS },
-  { name: 'Reading', sounds: READING_SOUNDS }
-];
-
-const MODES = {
-  '25-5': { work: 25 * 60, break: 5 * 60 },
-  '50-10': { work: 50 * 60, break: 10 * 60 },
-  '60-10': { work: 60 * 60, break: 10 * 60 },
-  'meditation-10': { work: 10 * 60, break: 0 },
-  'meditation-20': { work: 20 * 60, break: 0 },
-  'meditation-custom': { work: 10 * 60, break: 0 },
-  'reading-20': { work: 20 * 60, break: 0 },
-  'reading-30': { work: 30 * 60, break: 0 },
-  'reading-custom': { work: 20 * 60, break: 0 },
-};
-
 const MEDITATION_SOUNDS = {
   'med1': {
     id: 'FOwCCvHEfY0',
@@ -68,10 +50,6 @@ const READING_SOUNDS = {
   },
 };
 
-// Breathing cycle phases in seconds: [inhale, hold, exhale, hold]
-const BREATH_CYCLE = [4, 4, 6, 2]; // Box breathing variant
-const BREATH_LABELS = ['Inhale', 'Hold', 'Exhale', 'Rest'];
-
 const SOUNDS = {
   'sound1': {
     id: 'nMfPqeZjc2c',
@@ -89,6 +67,28 @@ const SOUNDS = {
     description: '"FOCUS & CONCENTRATION" with Dr. Andrew Huberman'
   }
 };
+
+const SOUND_CATEGORIES = [
+  { name: 'Focus', sounds: SOUNDS },
+  { name: 'Meditation', sounds: MEDITATION_SOUNDS },
+  { name: 'Reading', sounds: READING_SOUNDS }
+];
+
+const MODES = {
+  '25-5': { work: 25 * 60, break: 5 * 60 },
+  '50-10': { work: 50 * 60, break: 10 * 60 },
+  '60-10': { work: 60 * 60, break: 10 * 60 },
+  'meditation-10': { work: 10 * 60, break: 0 },
+  'meditation-20': { work: 20 * 60, break: 0 },
+  'meditation-custom': { work: 10 * 60, break: 0 },
+  'reading-20': { work: 20 * 60, break: 0 },
+  'reading-30': { work: 30 * 60, break: 0 },
+  'reading-custom': { work: 20 * 60, break: 0 },
+};
+
+// Breathing cycle phases in seconds: [inhale, hold, exhale, hold]
+const BREATH_CYCLE = [4, 4, 6, 2]; // Box breathing variant
+const BREATH_LABELS = ['Inhale', 'Hold', 'Exhale', 'Rest'];
 
 const BACKGROUNDS = [
   {
