@@ -81,7 +81,7 @@ body {
     min-height: auto;
     padding: clamp(16px, 3vw, 24px);
     gap: clamp(16px, 3vw, 28px);
-    justify-content: flex-start;
+    justify-content: center;
 }
 
 /* Glassmorphism Effect - Bubble Water Style */
