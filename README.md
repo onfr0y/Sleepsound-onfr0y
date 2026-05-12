@@ -116,4 +116,4 @@ Your app will be live at: `https://your-project-name.vercel.app`
 - The timer runs in your browser - refreshing the page will reset it
 - Background image and music are loaded from external sources
 - Built with React 18 and Vite for fast development and optimized builds
-- Optimized for Vercel deployment with proper routing and caching
+- Optimized for Vercel deployment with proper routing and caching..

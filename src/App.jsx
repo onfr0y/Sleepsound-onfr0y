@@ -2,6 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Settings, Image as ImageIcon, Volume2, VolumeX, ListTodo, Play, Pause, RotateCcw, X, Check } from 'lucide-react';
 import TaskTracker from './TaskTracker';
+import GlassSurface from './GlassSurface';
+import ElasticSlider from './ElasticSlider';
+import ShapeBlur from './ShapeBlur';
 import './index.css';
 
 const MEDITATION_SOUNDS = {
@@ -161,14 +164,15 @@ function App() {
   const [totalTime, setTotalTime] = useState(MODES['25-5'].work);
   const [isSoundEnabled, setIsSoundEnabled] = useState(true);
   const [currentSound, setCurrentSound] = useState('sound1');
-  const [currentBackground, setCurrentBackground] = useState('bg1');
+  const [currentBackground, setCurrentBackground] = useState('bg4');
   const [volume, setVolume] = useState(50);
   const [showSettings, setShowSettings] = useState(false);
   const [showWallpaperPicker, setShowWallpaperPicker] = useState(false);
   const [showTasks, setShowTasks] = useState(false);
-  const [isIpodMode, setIsIpodMode] = useState(true);
+  const isIpodMode = true;
   const [pulse, setPulse] = useState(false);
   const [repCount, setRepCount] = useState(0);
+  const [showVolumePopup, setShowVolumePopup] = useState(false);
   const repCountRef = React.useRef(0);
 
   // Meditation state
@@ -438,6 +442,38 @@ function App() {
     }
   };
 
+  // Listen to physical device volume keys
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
+      
+      let changed = false;
+      if (e.key === 'AudioVolumeUp' || e.key === 'ArrowUp') {
+        if (e.key === 'ArrowUp') e.preventDefault();
+        setVolume(v => Math.min(v + 10, 100));
+        changed = true;
+      } else if (e.key === 'AudioVolumeDown' || e.key === 'ArrowDown') {
+        if (e.key === 'ArrowDown') e.preventDefault();
+        setVolume(v => Math.max(v - 10, 0));
+        changed = true;
+      } else if (e.key === 'AudioVolumeMute' || (e.key === 'm' && (e.metaKey || e.ctrlKey))) {
+        setIsSoundEnabled(prev => !prev);
+        changed = true;
+      }
+
+      if (changed) {
+        setShowVolumePopup(true);
+        if (window.volumePopupTimeout) clearTimeout(window.volumePopupTimeout);
+        window.volumePopupTimeout = setTimeout(() => {
+          setShowVolumePopup(false);
+        }, 1000);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   // Breathing guide logic (only in meditation mode)
   useEffect(() => {
     if (!isMeditationMode || !isRunning) return;
@@ -653,13 +689,70 @@ function App() {
         style={{ backgroundImage: `url('${currentBgUrl}')` }}
       ></div>
 
+      {/* Top Volume Popup */}
+      <AnimatePresence>
+        {showVolumePopup && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.9 }}
+            transition={{ type: 'spring', bounce: 0.4 }}
+            style={{ 
+              position: 'absolute', 
+              top: '40px', 
+              left: '50%', 
+              x: '-50%',
+              zIndex: 1000 
+            }}
+            onMouseMove={() => {
+              if (window.volumePopupTimeout) clearTimeout(window.volumePopupTimeout);
+              window.volumePopupTimeout = setTimeout(() => {
+                setShowVolumePopup(false);
+              }, 1000);
+            }}
+          >
+            <GlassSurface borderRadius={24} width={240} height={60} blur={20} opacity={0.85} distortionScale={0} redOffset={0} greenOffset={0} blueOffset={0}>
+              <ElasticSlider 
+                defaultValue={volume} 
+                onChange={(v) => {
+                  setVolume(v);
+                  if (window.volumePopupTimeout) clearTimeout(window.volumePopupTimeout);
+                  window.volumePopupTimeout = setTimeout(() => {
+                    setShowVolumePopup(false);
+                  }, 1000);
+                }}
+                leftIcon={<VolumeX size={16} color="white" />}
+                rightIcon={<Volume2 size={16} color="white" />}
+              />
+            </GlassSurface>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <motion.div 
         className={isIpodMode ? "container ipod-shell glass" : "container"}
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.5, ease: "easeOut" }}
+        style={{ 
+          marginTop: isIpodMode ? (showVolumePopup ? '80px' : '40px') : undefined,
+          transition: 'margin-top 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), border-color 0.5s ease'
+        }}
       >
-        <div className={isIpodMode ? "ipod-screen glass-inner" : "desktop-screen-bypass"}>
+        {isIpodMode && (
+          <div style={{position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, overflow: 'hidden', zIndex: -1, borderRadius: 'inherit', pointerEvents: 'none'}}>
+            <ShapeBlur
+              variation={0}
+              pixelRatioProp={window.devicePixelRatio || 1}
+              shapeSize={1}
+              roundness={0.5}
+              borderSize={0.05}
+              circleSize={0.25}
+              circleEdge={1}
+            />
+          </div>
+        )}
+        <div className={isIpodMode ? "ipod-screen glass-inner" : "desktop-screen-bypass"} style={{ position: 'relative' }}>
           {isIpodMode && (
             <div className="ipod-status-bar">
                <span className="ipod-title">{isMeditationMode ? 'Meditate' : isReadingMode ? 'Reading' : 'Study iPod'}</span>
@@ -690,16 +783,6 @@ function App() {
                     </button>
                   </div>
                   <div className="settings-content">
-                    <div className="setting-item" style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.8rem', marginBottom: '0.3rem' }}>
-                      <label style={{ margin: 0, fontWeight: 600 }}>iPod Mode</label>
-                      <button
-                        className={`sound-option-btn ${isIpodMode ? 'active' : ''}`}
-                        style={{ padding: '0.3rem 0.8rem', width: 'auto', textAlign: 'center', boxShadow: 'none', fontSize: '0.8rem' }}
-                        onClick={() => setIsIpodMode(!isIpodMode)}
-                      >
-                        {isIpodMode ? 'ON' : 'OFF'}
-                      </button>
-                    </div>
                     <div className="setting-item">
                       <label>Background Sound</label>
                       <div className="sound-options-scrollable">
@@ -1112,7 +1195,17 @@ function App() {
               <button className="wheel-btn wheel-bottom" onClick={() => setShowTasks(true)}>
                 <ListTodo size={20} />
               </button>
-              <button className="wheel-btn wheel-left" onClick={handleToggleSound}>
+              <button 
+                className="wheel-btn wheel-left" 
+                onClick={handleToggleSound}
+                onMouseMove={() => {
+                  setShowVolumePopup(true);
+                  if (window.volumePopupTimeout) clearTimeout(window.volumePopupTimeout);
+                  window.volumePopupTimeout = setTimeout(() => {
+                    setShowVolumePopup(false);
+                  }, 1000);
+                }}
+              >
                 {isSoundEnabled ? <Volume2 size={24} /> : <VolumeX size={24} />}
               </button>
               <button className="wheel-btn wheel-right" onClick={handleReset}>
@@ -1125,129 +1218,44 @@ function App() {
           </div>
         )}
 
-        {/* Settings Panel (desktop/non-iPod mode only) */}
-        {!isIpodMode && (
-          <AnimatePresence>
-            {showSettings && (
-              <motion.div
-                className="settings-panel glass show"
-                initial={{ opacity: 0, scale: 0.9, y: "-50%", x: "-50%" }}
-                animate={{ opacity: 1, scale: 1, y: "-50%", x: "-50%" }}
-                exit={{ opacity: 0, scale: 0.9, y: "-50%", x: "-50%" }}
-                transition={{ duration: 0.2 }}
-                onClick={(e) => {
-                  if (e.target.classList.contains('settings-panel')) {
-                    setShowSettings(false);
-                  }
-                }}
-              >
-                <div className="settings-header">
-                  <h3>Settings</h3>
-                  <button className="icon-button" onClick={() => setShowSettings(false)}>
-                    <X size={20} />
-                  </button>
-                </div>
-                <div className="settings-content">
-                  <div className="setting-item" style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '1rem', marginBottom: '0.5rem' }}>
-                    <label style={{ margin: 0, fontWeight: 600 }}>Enable iPod UI</label>
-                    <button 
-                      className={`sound-option-btn ${isIpodMode ? 'active' : ''}`} 
-                      style={{ padding: '0.4rem 1rem', width: 'auto', textAlign: 'center', boxShadow: 'none' }}
-                      onClick={() => setIsIpodMode(!isIpodMode)}
-                    >
-                      {isIpodMode ? 'ON' : 'OFF'}
-                    </button>
-                  </div>
-                  <div className="setting-item">
-                    <label>Background Sound</label>
-                    <div className="sound-options-scrollable">
-                      {soundCategories.map((category) => (
-                        <div key={category.name} className="sound-category-group">
-                          <div className="sound-category-header">{category.name}</div>
-                          <div className="sound-options">
-                            {Object.entries(category.sounds).map(([key, sound]) => (
-                              <button
-                                key={key}
-                                className={`sound-option-btn ${currentSound === key ? 'active' : ''}`}
-                                onClick={() => handleSoundChange(key)}
-                              >
-                                <div className="sound-option-title">{sound.name}</div>
-                                <div className="sound-option-desc">{sound.description}</div>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="setting-item">
-                    <label htmlFor="volume-slider">Volume</label>
-                    <input
-                      type="range"
-                      id="volume-slider"
-                      min="0"
-                      max="100"
-                      value={volume}
-                      onChange={handleVolumeChange}
-                    />
-                    <span>{volume}%</span>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        )}
-
-        {/* Wallpaper Picker Panel (desktop/non-iPod mode only) */}
-        {!isIpodMode && (
-          <AnimatePresence>
-            {showWallpaperPicker && (
-              <motion.div
-                className="settings-panel glass show"
-                initial={{ opacity: 0, scale: 0.9, y: "-50%", x: "-50%" }}
-                animate={{ opacity: 1, scale: 1, y: "-50%", x: "-50%" }}
-                exit={{ opacity: 0, scale: 0.9, y: "-50%", x: "-50%" }}
-                transition={{ duration: 0.2 }}
-                onClick={(e) => {
-                  if (e.target.classList.contains('settings-panel')) {
-                    setShowWallpaperPicker(false);
-                  }
-                }}
-              >
-                <div className="settings-header">
-                  <h3>Choose Wallpaper</h3>
-                  <button className="icon-button" onClick={() => setShowWallpaperPicker(false)}>
-                    <X size={20} />
-                  </button>
-                </div>
-                <div className="settings-content">
-                  <div className="setting-item">
-                    <label>Background Images</label>
-                    <div className="wallpaper-grid">
-                      {BACKGROUNDS.map((bg) => (
-                        <button
-                          key={bg.id}
-                          className={`wallpaper-option ${currentBackground === bg.id ? 'active' : ''}`}
-                          onClick={() => handleBackgroundChange(bg.id)}
-                          style={{
-                            backgroundImage: `url('${bg.url}')`,
-                          }}
-                        >
-                          <div className="wallpaper-overlay">
-                            {currentBackground === bg.id && (
-                              <div className="wallpaper-check"><Check size={20} /></div>
-                            )}
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        )}
       </motion.div>
+
+      {/* MacOS Liquid Glass Dock (Desktop Screen Only) */}
+      <div className="desktop-dock-container">
+        <GlassSurface
+          width="fit-content"
+          height="fit-content"
+          borderRadius={20}
+          blur={15}
+          opacity={0.8}
+          className="desktop-dock-glass"
+        >
+          <button 
+            className={`dock-item ${!isMeditationMode && !isReadingMode ? 'active' : ''}`}
+            onClick={() => handleModeChange('25-5')}
+            title="Study Mode"
+          >
+            <img src="https://i.pinimg.com/736x/6e/af/5e/6eaf5ebad6a39c116181be827e3f7165.jpg" alt="Study" className="dock-icon-img" />
+            <span className="dock-tooltip">Study</span>
+          </button>
+          <button 
+            className={`dock-item ${isMeditationMode ? 'active' : ''}`}
+            onClick={() => handleModeChange('meditation-10')}
+            title="Meditate Mode"
+          >
+            <img src="https://i.pinimg.com/1200x/e4/b7/f3/e4b7f3fa97db257a750ace0f8767091b.jpg" alt="Meditate" className="dock-icon-img" />
+            <span className="dock-tooltip">Meditate</span>
+          </button>
+          <button 
+            className={`dock-item ${isReadingMode ? 'active' : ''}`}
+            onClick={() => handleModeChange('reading-20')}
+            title="Read Mode"
+          >
+            <img src="https://i.pinimg.com/736x/4f/08/d0/4f08d073e27356b670e6523e45369b7c.jpg" alt="Read" className="dock-icon-img" />
+            <span className="dock-tooltip">Read</span>
+          </button>
+        </GlassSurface>
+      </div>
 
       <TaskTracker isOpen={showTasks} onClose={() => setShowTasks(false)} />
     </div>
