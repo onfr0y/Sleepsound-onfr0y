@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useAnimationControls } from 'framer-motion';
 import { Settings, Image as ImageIcon, Volume2, VolumeX, ListTodo, Play, Pause, RotateCcw, X, Check } from 'lucide-react';
 import TaskTracker from './TaskTracker';
 import GlassSurface from './GlassSurface';
@@ -173,7 +173,26 @@ function App() {
   const [pulse, setPulse] = useState(false);
   const [repCount, setRepCount] = useState(0);
   const [showVolumePopup, setShowVolumePopup] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(
+    typeof window !== 'undefined' ? window.innerWidth > 768 : false
+  );
+  const [isDragging, setIsDragging] = useState(false);
+  const ipodControls = useAnimationControls();
   const repCountRef = React.useRef(0);
+
+  useEffect(() => {
+    const onResize = () => setIsDesktop(window.innerWidth > 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  useEffect(() => {
+    ipodControls.start({
+      opacity: 1,
+      scale: 1,
+      transition: { duration: 0.5, ease: 'easeOut' }
+    });
+  }, [ipodControls]);
 
   // Meditation state
   const [customMeditationMinutes, setCustomMeditationMinutes] = useState(10);
@@ -654,6 +673,8 @@ function App() {
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyPress = (e) => {
+      const tag = document.activeElement && document.activeElement.tagName;
+      const isTyping = tag === 'INPUT' || tag === 'TEXTAREA';
       if (e.code === 'Space') {
         e.preventDefault();
         setIsRunning(prev => !prev);
@@ -665,12 +686,19 @@ function App() {
         setTotalTime(workTime);
         setRepCount(0);
         repCountRef.current = 0;
+      } else if (e.code === 'KeyC' && !isTyping && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
+        ipodControls.start({
+          x: 0,
+          y: 0,
+          transition: { type: 'spring', stiffness: 260, damping: 26 }
+        });
       }
     };
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [workTime]);
+  }, [workTime, ipodControls]);
 
   const currentBgUrl = BACKGROUNDS.find(bg => bg.id === currentBackground)?.url || BACKGROUNDS[0].url;
 
@@ -729,14 +757,26 @@ function App() {
         )}
       </AnimatePresence>
 
-      <motion.div 
+      <motion.div
         className={isIpodMode ? "container ipod-shell glass" : "container"}
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5, ease: "easeOut" }}
-        style={{ 
+        initial={{ opacity: 0, scale: 0.95, x: 0, y: 0 }}
+        animate={ipodControls}
+        drag={isIpodMode && isDesktop}
+        dragMomentum={false}
+        dragElastic={0}
+        dragConstraints={{
+          left: -window.innerWidth / 2 + 100,
+          right: window.innerWidth / 2 - 100,
+          top: -window.innerHeight / 2 + 100,
+          bottom: window.innerHeight / 2 - 100,
+        }}
+        onDragStart={() => setIsDragging(true)}
+        onDragEnd={() => setTimeout(() => setIsDragging(false), 50)}
+        whileDrag={{ scale: 1.02 }}
+        style={{
           marginTop: isIpodMode ? (showVolumePopup ? '80px' : '40px') : undefined,
-          transition: 'margin-top 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), border-color 0.5s ease'
+          transition: 'margin-top 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), border-color 0.5s ease',
+          cursor: (isIpodMode && isDesktop) ? (isDragging ? 'grabbing' : 'grab') : 'default'
         }}
       >
         {isIpodMode && (
