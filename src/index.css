@@ -49,6 +49,10 @@ body {
     transition: background-image 0.5s ease;
 }
 
+.background-video {
+    object-fit: cover;
+}
+
 .background-image::after {
     content: '';
     position: absolute;

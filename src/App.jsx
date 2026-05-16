@@ -153,6 +153,13 @@ const BACKGROUNDS = [
     id: 'bg12',
     name: 'Background 12',
     url: 'https://i.pinimg.com/736x/d1/50/df/d150dfb1bb57563e8f3b070e61a6360f.jpg'
+  },
+  {
+    id: 'bg13',
+    name: 'Animated 1',
+    type: 'video',
+    url: 'https://v1.pinimg.com/videos/iht/expMp4/e2/b6/29/e2b6294294505371cc9a2fd780e2fe8c_720w.mp4',
+    poster: 'https://i.pinimg.com/videos/thumbnails/originals/e2/b6/29/e2b6294294505371cc9a2fd780e2fe8c.0000000.jpg'
   }
 ];
 
@@ -700,7 +707,8 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [workTime, ipodControls]);
 
-  const currentBgUrl = BACKGROUNDS.find(bg => bg.id === currentBackground)?.url || BACKGROUNDS[0].url;
+  const currentBg = BACKGROUNDS.find(bg => bg.id === currentBackground) || BACKGROUNDS[0];
+  const currentBgUrl = currentBg.url;
 
   const handleBackgroundChange = (bgId) => {
     setCurrentBackground(bgId);
@@ -712,10 +720,22 @@ function App() {
 
   return (
     <div className={`App${isMeditationMode ? ' meditation-active' : ''}${isReadingMode ? ' reading-active' : ''}`}>
-      <div
-        className="background-image"
-        style={{ backgroundImage: `url('${currentBgUrl}')` }}
-      ></div>
+      {currentBg.type === 'video' ? (
+        <video
+          className="background-image background-video"
+          src={currentBgUrl}
+          poster={currentBg.poster}
+          autoPlay
+          loop
+          muted
+          playsInline
+        />
+      ) : (
+        <div
+          className="background-image"
+          style={{ backgroundImage: `url('${currentBgUrl}')` }}
+        ></div>
+      )}
 
       {/* Top Volume Popup */}
       <AnimatePresence>
@@ -882,7 +902,7 @@ function App() {
                             key={bg.id}
                             className={`wallpaper-option ${currentBackground === bg.id ? 'active' : ''}`}
                             onClick={() => handleBackgroundChange(bg.id)}
-                            style={{ backgroundImage: `url('${bg.url}')` }}
+                            style={{ backgroundImage: `url('${bg.type === 'video' ? bg.poster : bg.url}')` }}
                           >
                             <div className="wallpaper-overlay">
                               {currentBackground === bg.id && (
