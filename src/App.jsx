@@ -230,7 +230,7 @@ function App() {
   const breakTime = currentMode === 'custom' ? customBreakMinutes * 60 : (MODES[currentMode]?.break ?? 0);
 
   // Completion sound video ID
-  const COMPLETION_SOUND_ID = '_Gukzgo-Mi4';
+  const COMPLETION_SOUND_ID = 'DiVG89Sq6Dg';
 
   // YouTube Player
   const [youtubePlayer, setYoutubePlayer] = useState(null);
