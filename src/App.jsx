@@ -1380,7 +1380,13 @@ function App() {
                     <div style={{ width: 40 }}></div>
                   </div>
                   <div className="settings-content" style={{ padding: '0.2rem' }}>
-                    {soundCategories.map((category) => (
+                    {soundCategories
+                      .filter(category => {
+                        if (isMeditationMode) return category.name === 'Meditation';
+                        if (isReadingMode) return category.name === 'Reading';
+                        return category.name === 'Focus';
+                      })
+                      .map((category) => (
                       <div key={category.name} style={{ marginBottom: '0.4rem' }}>
                         <div className="apple-group-title">{category.name}</div>
                         <div className="apple-group">
