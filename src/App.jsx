@@ -6,6 +6,9 @@ import GlassSurface from './GlassSurface';
 import ElasticSlider from './ElasticSlider';
 import ShapeBlur from './ShapeBlur';
 import './index.css';
+import AmbientWaveform from './AmbientWaveform';
+import NotesPanel from './NotesPanel';
+import SnakeGame from './SnakeGame';
 
 const MEDITATION_SOUNDS = {
   'med1': {
@@ -89,9 +92,59 @@ const MODES = {
   'reading-custom': { work: 20 * 60, break: 0 },
 };
 
-// Breathing cycle phases in seconds: [inhale, hold, exhale, hold]
-const BREATH_CYCLE = [4, 4, 6, 2]; // Box breathing variant
-const BREATH_LABELS = ['Inhale', 'Hold', 'Exhale', 'Rest'];
+// Breathing exercise presets
+const BREATHING_PRESETS = [
+  {
+    id: '4-4-coherent',
+    name: '4-4 Coherent',
+    subtitle: 'Nervous system balance',
+    cycle: [4, 4],
+    labels: ['Inhale', 'Exhale'],
+    description: 'Equal 4s inhale and 4s exhale. Helps stabilize heart rate variability, reduce stress, and balance the nervous system.'
+  },
+  {
+    id: 'physiological-sigh',
+    name: 'Physiological Sigh (Huberman)',
+    subtitle: 'Rapid stress relief',
+    cycle: [4, 1, 6, 2],
+    labels: ['Inhale (Deep)', 'Inhale (Sniff)', 'Exhale (Slow)', 'Rest'],
+    description: 'Stanford neurobiologist Dr. Andrew Huberman\'s research shows a double-inhale (deep nose inhale + quick top-up sniff) followed by a long exhale is the fastest way to relieve stress and lower autonomic arousal.'
+  },
+  {
+    id: 'box-breathing',
+    name: 'Box Breathing (4-4-4-4)',
+    subtitle: 'Navy SEAL focus',
+    cycle: [4, 4, 4, 4],
+    labels: ['Inhale', 'Hold', 'Exhale', 'Hold'],
+    description: 'Used by elite operators for calm, focused alertness. Four equal phases structure breathing to reset mental clarity.'
+  },
+  {
+    id: '4-7-8-breathing',
+    name: '4-7-8 Breathing',
+    subtitle: 'Deep sleep & relax',
+    cycle: [4, 7, 8],
+    labels: ['Inhale', 'Hold', 'Exhale'],
+    description: 'Created by Dr. Andrew Weil. Acts as a natural tranquilizer for the nervous system, ideal for winding down.'
+  },
+  {
+    id: 'custom',
+    name: 'Custom Exercise',
+    subtitle: 'Build your own',
+    cycle: [4, 4],
+    labels: ['Inhale', 'Exhale'],
+    description: 'Configure your own custom breathing durations for each phase.'
+  }
+];
+
+const getPhaseClass = (label) => {
+  if (!label) return 'rest';
+  const l = label.toLowerCase();
+  if (l.includes('inhale')) return 'inhale';
+  if (l.includes('exhale')) return 'exhale';
+  if (l.includes('hold')) return 'hold';
+  if (l.includes('rest') || l.includes('pause')) return 'rest';
+  return 'rest';
+};
 
 const BACKGROUNDS = [
   {
@@ -165,6 +218,17 @@ const BACKGROUNDS = [
 
 function App() {
   const [currentMode, setCurrentMode] = useState('25-5');
+  const [whiteNoiseVolume, setWhiteNoiseVolume] = useState(0);
+  const [rainVolume, setRainVolume] = useState(0);
+  const [wavesVolume, setWavesVolume] = useState(0);
+
+  const audioContextRef = useRef(null);
+  const whiteNoiseSourceRef = useRef(null);
+  const whiteNoiseGainRef = useRef(null);
+  const rainAudioRef = useRef(null);
+  const wavesAudioRef = useRef(null);
+  const wheelRef = useRef(null);
+  const [wheelAngle, setWheelAngle] = useState(null);
   const [timeLeft, setTimeLeft] = useState(MODES['25-5'].work);
   const [isRunning, setIsRunning] = useState(false);
   const [isWorkSession, setIsWorkSession] = useState(true);
@@ -176,6 +240,8 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showWallpaperPicker, setShowWallpaperPicker] = useState(false);
   const [showTasks, setShowTasks] = useState(false);
+  const [showNotesPanel, setShowNotesPanel] = useState(false);
+  const [showSnakePanel, setShowSnakePanel] = useState(false);
   const isIpodMode = true;
   const [pulse, setPulse] = useState(false);
   const [repCount, setRepCount] = useState(0);
@@ -203,10 +269,111 @@ function App() {
 
   // Meditation state
   const [customMeditationMinutes, setCustomMeditationMinutes] = useState(10);
+  const [selectedPresetId, setSelectedPresetId] = useState('4-4-coherent');
+  const [breathCycle, setBreathCycle] = useState([4, 4]);
+  const [breathLabels, setBreathLabels] = useState(['Inhale', 'Exhale']);
+  const [customCycle, setCustomCycle] = useState([4, 4]);
+  const [customLabels, setCustomLabels] = useState(['Inhale', 'Exhale']);
+  
   const [breathPhaseIndex, setBreathPhaseIndex] = useState(0);
-  const [breathSecondsLeft, setBreathSecondsLeft] = useState(BREATH_CYCLE[0]);
+  const [breathSecondsLeft, setBreathSecondsLeft] = useState(4);
   const breathPhaseRef = useRef(0);
-  const breathSecondsRef = useRef(BREATH_CYCLE[0]);
+  const breathSecondsRef = useRef(4);
+
+  const getBreathOrbStyle = () => {
+    if (!isRunning) {
+      return { 
+        animation: 'breath-idle-pulse 4s ease-in-out infinite',
+      };
+    }
+    const label = breathLabels[breathPhaseIndex] || '';
+    const duration = breathCycle[breathPhaseIndex] || 4;
+    const l = label.toLowerCase();
+
+    if (l.includes('inhale') && !l.includes('hold') && !l.includes('sniff')) {
+      return {
+        transform: 'scale(1.35)',
+        boxShadow: '0 0 30px rgba(196, 167, 255, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.4)',
+        transition: `transform ${duration}s linear, box-shadow ${duration}s linear`,
+      };
+    } else if (l.includes('exhale')) {
+      return {
+        transform: 'scale(0.85)',
+        boxShadow: '0 0 15px rgba(196, 167, 255, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
+        transition: `transform ${duration}s linear, box-shadow ${duration}s linear`,
+      };
+    } else if (l.includes('hold') || l.includes('sniff')) {
+      const isHoldAfterInhale = breathPhaseIndex === 1 || (breathPhaseIndex > 0 && breathLabels[breathPhaseIndex - 1]?.toLowerCase().includes('inhale'));
+      return {
+        transform: isHoldAfterInhale ? 'scale(1.35)' : 'scale(0.85)',
+        boxShadow: isHoldAfterInhale 
+          ? '0 0 30px rgba(196, 167, 255, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.4)' 
+          : '0 0 15px rgba(196, 167, 255, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
+        transition: `transform ${duration}s linear, box-shadow ${duration}s linear`,
+      };
+    } else {
+      return {
+        transform: 'scale(0.85)',
+        opacity: 0.7,
+        boxShadow: '0 0 15px rgba(196, 167, 255, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
+      };
+    }
+  };
+
+  const handlePresetChange = (presetId) => {
+    setSelectedPresetId(presetId);
+    if (presetId === 'custom') {
+      setBreathCycle(customCycle);
+      setBreathLabels(customLabels);
+      
+      breathPhaseRef.current = 0;
+      breathSecondsRef.current = customCycle[0];
+      setBreathPhaseIndex(0);
+      setBreathSecondsLeft(customCycle[0]);
+      return;
+    }
+    const preset = BREATHING_PRESETS.find(p => p.id === presetId);
+    if (preset) {
+      setBreathCycle(preset.cycle);
+      setBreathLabels(preset.labels);
+      
+      // Reset breathing progress
+      breathPhaseRef.current = 0;
+      breathSecondsRef.current = preset.cycle[0];
+      setBreathPhaseIndex(0);
+      setBreathSecondsLeft(preset.cycle[0]);
+    }
+  };
+
+  const handlePhaseDurationChange = (index, newDuration) => {
+    const val = Math.max(1, newDuration);
+    let updatedCycle;
+    let updatedLabels;
+    
+    if (selectedPresetId === 'custom') {
+      updatedCycle = [...breathCycle];
+      updatedCycle[index] = val;
+      setBreathCycle(updatedCycle);
+      setCustomCycle(updatedCycle);
+      updatedLabels = breathLabels;
+    } else {
+      updatedCycle = [...breathCycle];
+      updatedCycle[index] = val;
+      updatedLabels = [...breathLabels];
+      
+      setBreathCycle(updatedCycle);
+      setBreathLabels(updatedLabels);
+      setCustomCycle(updatedCycle);
+      setCustomLabels(updatedLabels);
+      setSelectedPresetId('custom');
+    }
+
+    // Reset breathing progress to keep in sync
+    breathPhaseRef.current = 0;
+    breathSecondsRef.current = updatedCycle[0];
+    setBreathPhaseIndex(0);
+    setBreathSecondsLeft(updatedCycle[0]);
+  };
 
   // Reading state
   const [pagesRead, setPagesRead] = useState(0);
@@ -246,6 +413,207 @@ function App() {
   useEffect(() => {
     repCountRef.current = repCount;
   }, [repCount]);
+
+  // Local mixer ambient loop audio setup
+  useEffect(() => {
+    rainAudioRef.current = new Audio('https://www.soundjay.com/nature/sounds/rain-07.mp3');
+    rainAudioRef.current.loop = true;
+
+    wavesAudioRef.current = new Audio('https://www.soundjay.com/nature/sounds/ocean-wave-1.mp3');
+    wavesAudioRef.current.loop = true;
+
+    return () => {
+      if (rainAudioRef.current) rainAudioRef.current.pause();
+      if (wavesAudioRef.current) wavesAudioRef.current.pause();
+      if (whiteNoiseSourceRef.current) {
+        try { whiteNoiseSourceRef.current.stop(); } catch (e) {}
+      }
+      if (audioContextRef.current) {
+        try { audioContextRef.current.close(); } catch (e) {}
+      }
+    };
+  }, []);
+
+  // Update loop volumes
+  useEffect(() => {
+    if (rainAudioRef.current) {
+      rainAudioRef.current.volume = isSoundEnabled ? (rainVolume / 100) : 0;
+      if (isSoundEnabled && rainVolume > 0) {
+        rainAudioRef.current.play().catch(() => {});
+      } else {
+        rainAudioRef.current.pause();
+      }
+    }
+  }, [rainVolume, isSoundEnabled]);
+
+  useEffect(() => {
+    if (wavesAudioRef.current) {
+      wavesAudioRef.current.volume = isSoundEnabled ? (wavesVolume / 100) : 0;
+      if (isSoundEnabled && wavesVolume > 0) {
+        wavesAudioRef.current.play().catch(() => {});
+      } else {
+        wavesAudioRef.current.pause();
+      }
+    }
+  }, [wavesVolume, isSoundEnabled]);
+
+  const startWhiteNoise = () => {
+    if (!audioContextRef.current) {
+      audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    const ctx = audioContextRef.current;
+    if (ctx.state === 'suspended') {
+      ctx.resume();
+    }
+
+    if (whiteNoiseSourceRef.current) return;
+
+    const bufferSize = 2 * ctx.sampleRate;
+    const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const output = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      output[i] = Math.random() * 2 - 1;
+    }
+
+    const source = ctx.createBufferSource();
+    source.buffer = noiseBuffer;
+    source.loop = true;
+
+    const gainNode = ctx.createGain();
+    gainNode.gain.setValueAtTime(0, ctx.currentTime);
+
+    source.connect(gainNode);
+    gainNode.connect(ctx.destination);
+
+    source.start();
+
+    whiteNoiseSourceRef.current = source;
+    whiteNoiseGainRef.current = gainNode;
+  };
+
+  useEffect(() => {
+    if (isSoundEnabled && whiteNoiseVolume > 0) {
+      try {
+        startWhiteNoise();
+        if (whiteNoiseGainRef.current && audioContextRef.current) {
+          whiteNoiseGainRef.current.gain.linearRampToValueAtTime(
+            (whiteNoiseVolume / 100) * 0.15,
+            audioContextRef.current.currentTime + 0.1
+          );
+        }
+      } catch (e) {
+        console.error('White noise failed to play:', e);
+      }
+    } else {
+      if (whiteNoiseGainRef.current && audioContextRef.current) {
+        whiteNoiseGainRef.current.gain.linearRampToValueAtTime(0, audioContextRef.current.currentTime + 0.1);
+      }
+    }
+  }, [whiteNoiseVolume, isSoundEnabled]);
+
+  const playTickSound = () => {
+    try {
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      const ctx = audioContextRef.current;
+      if (ctx.state === 'suspended') {
+        ctx.resume();
+      }
+
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(800, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.015);
+
+      gain.gain.setValueAtTime(0.04, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.015);
+
+      osc.start();
+      osc.stop(ctx.currentTime + 0.015);
+    } catch (e) {}
+  };
+
+  const handleWheelRotation = (direction) => {
+    if (showSettings) {
+      const scrollable = document.querySelector('.sound-options-scrollable') || document.querySelector('.settings-content');
+      if (scrollable) {
+        scrollable.scrollTop += direction * 25;
+      }
+    } else if (showTasks) {
+      const scrollable = document.querySelector('.task-list');
+      if (scrollable) {
+        scrollable.scrollTop += direction * 25;
+      }
+    } else if (showWallpaperPicker) {
+      const scrollable = document.querySelector('.wallpaper-grid') || document.querySelector('.ipod-screen-panel');
+      if (scrollable) {
+        scrollable.scrollTop += direction * 25;
+      }
+    } else if (showNotesPanel) {
+      const scrollable = document.querySelector('.notes-history-list') || document.querySelector('.notes-content');
+      if (scrollable) {
+        scrollable.scrollTop += direction * 25;
+      }
+    } else if (showSnakePanel) {
+      window.handleSnakeRotateInput?.(direction);
+    } else {
+      setVolume((prev) => {
+        const nextVolume = Math.min(100, Math.max(0, prev + direction * 4));
+        setShowVolumePopup(true);
+        if (window.volumePopupTimeout) clearTimeout(window.volumePopupTimeout);
+        window.volumePopupTimeout = setTimeout(() => {
+          setShowVolumePopup(false);
+        }, 1200);
+        return nextVolume;
+      });
+    }
+  };
+
+  const handleWheelStart = (e) => {
+    const wheel = wheelRef.current;
+    if (!wheel) return;
+    const rect = wheel.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const clientX = e.clientX || e.touches?.[0]?.clientX;
+    const clientY = e.clientY || e.touches?.[0]?.clientY;
+    const angle = Math.atan2(clientY - cy, clientX - cx) * (180 / Math.PI);
+    setWheelAngle(angle);
+  };
+
+  const handleWheelMove = (e) => {
+    if (wheelAngle === null) return;
+    const wheel = wheelRef.current;
+    if (!wheel) return;
+    const rect = wheel.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const clientX = e.clientX || e.touches?.[0]?.clientX;
+    const clientY = e.clientY || e.touches?.[0]?.clientY;
+    const currentAngle = Math.atan2(clientY - cy, clientX - cx) * (180 / Math.PI);
+
+    let dAngle = currentAngle - wheelAngle;
+    if (dAngle > 180) dAngle -= 360;
+    if (dAngle < -180) dAngle += 360;
+
+    const threshold = 18;
+    if (Math.abs(dAngle) >= threshold) {
+      const direction = dAngle > 0 ? 1 : -1;
+      setWheelAngle(currentAngle);
+      playTickSound();
+      handleWheelRotation(direction);
+    }
+  };
+
+  const handleWheelEnd = () => {
+    setWheelAngle(null);
+  };
 
   // Initialize YouTube Player
   useEffect(() => {
@@ -506,17 +874,17 @@ function App() {
     const interval = setInterval(() => {
       breathSecondsRef.current -= 1;
       if (breathSecondsRef.current <= 0) {
-        const nextPhase = (breathPhaseRef.current + 1) % BREATH_CYCLE.length;
+        const nextPhase = (breathPhaseRef.current + 1) % breathCycle.length;
         breathPhaseRef.current = nextPhase;
-        breathSecondsRef.current = BREATH_CYCLE[nextPhase];
+        breathSecondsRef.current = breathCycle[nextPhase];
         setBreathPhaseIndex(nextPhase);
-        setBreathSecondsLeft(BREATH_CYCLE[nextPhase]);
+        setBreathSecondsLeft(breathCycle[nextPhase]);
       } else {
         setBreathSecondsLeft(breathSecondsRef.current);
       }
     }, 1000);
     return () => clearInterval(interval);
-  }, [isMeditationMode, isRunning]);
+  }, [isMeditationMode, isRunning, breathCycle]);
 
   // Timer logic
   useEffect(() => {
@@ -595,9 +963,9 @@ function App() {
     repCountRef.current = 0;
     // Reset breathing guide
     breathPhaseRef.current = 0;
-    breathSecondsRef.current = BREATH_CYCLE[0];
+    breathSecondsRef.current = breathCycle[0] || 4;
     setBreathPhaseIndex(0);
-    setBreathSecondsLeft(BREATH_CYCLE[0]);
+    setBreathSecondsLeft(breathCycle[0] || 4);
     // Reset reading tracker if in reading mode
     if (isReadingMode) {
       setPagesRead(0);
@@ -612,9 +980,9 @@ function App() {
 
     // Reset breathing guide
     breathPhaseRef.current = 0;
-    breathSecondsRef.current = BREATH_CYCLE[0];
+    breathSecondsRef.current = breathCycle[0] || 4;
     setBreathPhaseIndex(0);
-    setBreathSecondsLeft(BREATH_CYCLE[0]);
+    setBreathSecondsLeft(breathCycle[0] || 4);
 
     // Reset reading tracker
     setPagesRead(0);
@@ -866,9 +1234,73 @@ function App() {
                       </div>
                     </div>
                     <div className="setting-item">
+                      <label>Ambient Mixer</label>
+                      <div className="mixer-sliders">
+                        <div className="mixer-slider-row">
+                          <span>🌧️ Rain</span>
+                          <input 
+                            type="range" 
+                            min="0" 
+                            max="100" 
+                            value={rainVolume} 
+                            onChange={(e) => setRainVolume(parseInt(e.target.value))} 
+                          />
+                          <span className="slider-val">{rainVolume}%</span>
+                        </div>
+                        <div className="mixer-slider-row">
+                          <span>🌊 Ocean</span>
+                          <input 
+                            type="range" 
+                            min="0" 
+                            max="100" 
+                            value={wavesVolume} 
+                            onChange={(e) => setWavesVolume(parseInt(e.target.value))} 
+                          />
+                          <span className="slider-val">{wavesVolume}%</span>
+                        </div>
+                        <div className="mixer-slider-row">
+                          <span>📺 Noise</span>
+                          <input 
+                            type="range" 
+                            min="0" 
+                            max="100" 
+                            value={whiteNoiseVolume} 
+                            onChange={(e) => setWhiteNoiseVolume(parseInt(e.target.value))} 
+                          />
+                          <span className="slider-val">{whiteNoiseVolume}%</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="setting-item">
                       <label htmlFor="ipod-volume">Volume</label>
                       <input type="range" id="ipod-volume" min="0" max="100" value={volume} onChange={handleVolumeChange} />
                       <span>{volume}%</span>
+                    </div>
+                    <div className="setting-item" style={{ marginTop: '0.4rem' }}>
+                      <button 
+                        className="sound-option-btn" 
+                        style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0.6rem' }}
+                        onClick={() => {
+                          setShowSettings(false);
+                          setShowNotesPanel(true);
+                        }}
+                      >
+                        <span style={{ fontWeight: 600 }}>📝 Notes & Logs</span>
+                        <span>&rarr;</span>
+                      </button>
+                    </div>
+                    <div className="setting-item" style={{ marginTop: '0.4rem' }}>
+                      <button 
+                        className="sound-option-btn" 
+                        style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0.6rem' }}
+                        onClick={() => {
+                          setShowSettings(false);
+                          setShowSnakePanel(true);
+                        }}
+                      >
+                        <span style={{ fontWeight: 600 }}>🕹️ Play Snake Game</span>
+                        <span>&rarr;</span>
+                      </button>
                     </div>
                   </div>
                 </motion.div>
@@ -915,6 +1347,29 @@ function App() {
                     </div>
                   </div>
                 </motion.div>
+              )}
+            </AnimatePresence>
+          )}
+          {isIpodMode && (
+            <AnimatePresence>
+              {showNotesPanel && (
+                <NotesPanel 
+                  isOpen={showNotesPanel} 
+                  onClose={() => setShowNotesPanel(false)} 
+                  currentMode={currentMode}
+                />
+              )}
+            </AnimatePresence>
+          )}
+          {isIpodMode && (
+            <AnimatePresence>
+              {showSnakePanel && (
+                <SnakeGame 
+                  isOpen={showSnakePanel} 
+                  onClose={() => setShowSnakePanel(false)} 
+                  timeLeft={timeLeft}
+                  isWorkSession={isWorkSession}
+                />
               )}
             </AnimatePresence>
           )}
@@ -988,12 +1443,40 @@ function App() {
             <div className={`timer-display ${pulse ? 'pulse' : ''}`}>
               {formatTime(timeLeft)}
             </div>
+            {/* Play Snake Game shortcut button during Pomodoro Break */}
+            {(!isWorkSession && !isMeditationMode && !isReadingMode) && (
+              <div style={{ marginTop: '0.4rem', textAlign: 'center' }}>
+                <button
+                  className="interval-btn"
+                  style={{ padding: '0.45rem 0.8rem', borderRadius: '10px', fontSize: '0.72rem', background: 'rgba(255, 255, 255, 0.05)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                  onClick={() => setShowSnakePanel(true)}
+                >
+                  <span>🕹️ Play Snake</span>
+                </button>
+              </div>
+            )}
+            <AmbientWaveform 
+              isRunning={isRunning}
+              isMeditationMode={isMeditationMode}
+              breathLabels={breathLabels}
+              breathPhaseIndex={breathPhaseIndex}
+              themeColor={
+                isMeditationMode 
+                  ? 'rgba(196, 167, 255, 0.6)' 
+                  : isReadingMode 
+                    ? 'rgba(253, 186, 116, 0.6)' 
+                    : 'rgba(147, 197, 253, 0.6)'
+              }
+            />
             {/* Breathing guide – shown only in meditation mode */}
             {isMeditationMode && (
-              <div className={`breath-guide breath-${BREATH_LABELS[breathPhaseIndex].toLowerCase()}`}>
-                <div className={`breath-orb ${isRunning ? `breath-${BREATH_LABELS[breathPhaseIndex].toLowerCase()}` : ''}`}></div>
+              <div className={`breath-guide breath-${getPhaseClass(breathLabels[breathPhaseIndex])}`}>
+                <div
+                  className="breath-orb"
+                  style={getBreathOrbStyle()}
+                ></div>
                 <div className="breath-text">
-                  <span className="breath-label">{BREATH_LABELS[breathPhaseIndex]}</span>
+                  <span className="breath-label">{breathLabels[breathPhaseIndex]}</span>
                   <span className="breath-seconds">{breathSecondsLeft}s</span>
                 </div>
               </div>
@@ -1177,6 +1660,62 @@ function App() {
                   </div>
                 </div>
               )}
+
+              {/* Breathing Exercise Selection */}
+              <div className="breathing-settings-section">
+                <div className="settings-divider"></div>
+                <h3 className="interval-title" style={{ marginTop: '1.25rem' }}>Breathing Exercise</h3>
+                <div className="breathing-presets-scroll">
+                  {BREATHING_PRESETS.map((preset) => (
+                    <button
+                      key={preset.id}
+                      className={`breathing-preset-btn ${selectedPresetId === preset.id ? 'active' : ''}`}
+                      onClick={() => handlePresetChange(preset.id)}
+                    >
+                      <div className="preset-name">{preset.name}</div>
+                      <div className="preset-subtitle">{preset.subtitle}</div>
+                    </button>
+                  ))}
+                </div>
+                
+                {/* Preset Information / Scientific Explanation */}
+                {BREATHING_PRESETS.find(p => p.id === selectedPresetId) && (
+                  <div className="breathing-info-card">
+                    <p className="breathing-description">
+                      {BREATHING_PRESETS.find(p => p.id === selectedPresetId).description}
+                    </p>
+                  </div>
+                )}
+
+                {/* Phase Adjusters */}
+                <div className="breathing-adjusters-container">
+                  <h4 className="adjusters-title">Adjust Cycle Durations</h4>
+                  <div className="adjusters-grid">
+                    {breathLabels.map((label, idx) => (
+                      <div key={idx} className="phase-adjuster">
+                        <span className="phase-label">{label}</span>
+                        <div className="adjuster-controls">
+                          <button
+                            className="adjuster-btn"
+                            onClick={() => handlePhaseDurationChange(idx, breathCycle[idx] - 1)}
+                            disabled={breathCycle[idx] <= 1}
+                          >
+                            -
+                          </button>
+                          <span className="phase-seconds-value">{breathCycle[idx]}s</span>
+                          <button
+                            className="adjuster-btn"
+                            onClick={() => handlePhaseDurationChange(idx, breathCycle[idx] + 1)}
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
               {/* Divider + back to Study */}
               <div className="mode-divider"><span>or</span></div>
               <button
@@ -1250,15 +1789,33 @@ function App() {
         
         {isIpodMode && (
           <div className="ipod-wheel-container">
-            <div className="ipod-wheel">
-              <button className="wheel-btn wheel-top" onClick={() => setShowSettings(true)}>MENU</button>
-              <button className="wheel-btn wheel-bottom" onClick={() => setShowTasks(true)}>
+            <div 
+              ref={wheelRef}
+              className="ipod-wheel"
+              onMouseDown={handleWheelStart}
+              onMouseMove={handleWheelMove}
+              onMouseUp={handleWheelEnd}
+              onMouseLeave={handleWheelEnd}
+              onTouchStart={handleWheelStart}
+              onTouchMove={handleWheelMove}
+              onTouchEnd={handleWheelEnd}
+            >
+              <button 
+                className="wheel-btn wheel-top" 
+                onClick={showSnakePanel ? () => window.handleSnakeDirection?.('UP') : () => setShowSettings(true)}
+              >
+                MENU
+              </button>
+              <button 
+                className="wheel-btn wheel-bottom" 
+                onClick={showSnakePanel ? () => window.handleSnakeDirection?.('DOWN') : () => setShowTasks(true)}
+              >
                 <ListTodo size={20} />
               </button>
               <button 
                 className="wheel-btn wheel-left" 
-                onClick={handleToggleSound}
-                onMouseMove={() => {
+                onClick={showSnakePanel ? () => window.handleSnakeDirection?.('LEFT') : handleToggleSound}
+                onMouseMove={showSnakePanel ? undefined : () => {
                   setShowVolumePopup(true);
                   if (window.volumePopupTimeout) clearTimeout(window.volumePopupTimeout);
                   window.volumePopupTimeout = setTimeout(() => {
@@ -1266,13 +1823,19 @@ function App() {
                   }, 1000);
                 }}
               >
-                {isSoundEnabled ? <Volume2 size={24} /> : <VolumeX size={24} />}
+                {showSnakePanel ? <span>&larr;</span> : (isSoundEnabled ? <Volume2 size={24} /> : <VolumeX size={24} />)}
               </button>
-              <button className="wheel-btn wheel-right" onClick={handleReset}>
-                <RotateCcw size={24} />
+              <button 
+                className="wheel-btn wheel-right" 
+                onClick={showSnakePanel ? () => window.handleSnakeDirection?.('RIGHT') : handleReset}
+              >
+                {showSnakePanel ? <span>&rarr;</span> : <RotateCcw size={24} />}
               </button>
-              <button className="wheel-center" onClick={handleStartPause}>
-                {isRunning ? <Pause size={30} /> : <Play size={30} />}
+              <button 
+                className="wheel-center" 
+                onClick={showSnakePanel ? () => window.handleSnakeAction?.() : handleStartPause}
+              >
+                {showSnakePanel ? <Play size={24} /> : (isRunning ? <Pause size={30} /> : <Play size={30} />)}
               </button>
             </div>
           </div>
