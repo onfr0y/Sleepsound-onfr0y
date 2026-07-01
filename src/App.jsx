@@ -1307,7 +1307,7 @@ function App() {
                           setShowNotesPanel(true);
                         }}
                       >
-                        <span style={{ fontWeight: 600 }}>📝 Notes & Logs</span>
+                        <span style={{ fontWeight: 600 }}>Notes & Logs</span>
                         <span>&rarr;</span>
                       </button>
                     </div>
@@ -1320,7 +1320,7 @@ function App() {
                           setShowSnakePanel(true);
                         }}
                       >
-                        <span style={{ fontWeight: 600 }}>🕹️ Play Snake Game</span>
+                        <span style={{ fontWeight: 600 }}>Play Snake Game</span>
                         <span>&rarr;</span>
                       </button>
                     </div>
@@ -1469,19 +1469,19 @@ function App() {
             {(!isMeditationMode && !isReadingMode) && (
               <div style={{ marginTop: '0.4rem', display: 'flex', gap: '0.4rem', justifyContent: 'center', flexWrap: 'wrap' }}>
                 <button
-                  className="interval-btn"
-                  style={{ padding: '0.45rem 0.8rem', borderRadius: '10px', fontSize: '0.72rem', background: 'rgba(255, 255, 255, 0.05)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                  className="glass-btn"
+                  style={{ padding: '0.45rem 0.8rem', borderRadius: '10px', fontSize: '0.72rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                   onClick={handleToggleWorkBreak}
                 >
-                  <span>{isWorkSession ? '⏱️ Switch to Break' : '⏱️ Switch to Study'}</span>
+                  <span>{isWorkSession ? 'Switch to Break' : 'Switch to Study'}</span>
                 </button>
                 {!isWorkSession && (
                   <button
-                    className="interval-btn"
-                    style={{ padding: '0.45rem 0.8rem', borderRadius: '10px', fontSize: '0.72rem', background: 'rgba(255, 255, 255, 0.05)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                    className="glass-btn"
+                    style={{ padding: '0.45rem 0.8rem', borderRadius: '10px', fontSize: '0.72rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                     onClick={() => setShowSnakePanel(true)}
                   >
-                    <span>🕹️ Play Snake</span>
+                    <span>Play Snake</span>
                   </button>
                 )}
               </div>
