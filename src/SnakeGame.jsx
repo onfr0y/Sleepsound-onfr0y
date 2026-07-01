@@ -20,54 +20,89 @@ export default function SnakeGame({ isOpen, onClose, timeLeft, isWorkSession }) 
   });
   const [gameMode, setGameMode] = useState('classic'); // 'classic' or 'wrap'
 
+  const canvasRef = useRef(null);
   const gameLoopRef = useRef(null);
+  const audioCtxRef = useRef(null);
 
-  // Sound Synthesizers
+  // Refs for stable game loop closure
+  const directionRef = useRef(direction);
+  const foodRef = useRef(food);
+  const gameModeRef = useRef(gameMode);
+  const snakeRef = useRef(snake);
+
+  useEffect(() => {
+    directionRef.current = direction;
+  }, [direction]);
+
+  useEffect(() => {
+    foodRef.current = food;
+  }, [food]);
+
+  useEffect(() => {
+    gameModeRef.current = gameMode;
+  }, [gameMode]);
+
+  useEffect(() => {
+    snakeRef.current = snake;
+  }, [snake]);
+
+  // Audio Context Provider
+  const getAudioContext = () => {
+    if (!audioCtxRef.current) {
+      audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtxRef.current.state === 'suspended') {
+      audioCtxRef.current.resume();
+    }
+    return audioCtxRef.current;
+  };
+
   const playEatSound = () => {
     try {
-      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
+      const ctx = getAudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
       osc.connect(gain);
-      gain.connect(audioCtx.destination);
+      gain.connect(ctx.destination);
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(520, audioCtx.currentTime); // C5
-      osc.frequency.setValueAtTime(659, audioCtx.currentTime + 0.06); // E5
-      gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.12);
+      osc.frequency.setValueAtTime(520, ctx.currentTime); // C5
+      osc.frequency.setValueAtTime(659, ctx.currentTime + 0.06); // E5
+      gain.gain.setValueAtTime(0.06, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
       osc.start();
-      osc.stop(audioCtx.currentTime + 0.12);
+      osc.stop(ctx.currentTime + 0.12);
     } catch (e) {}
   };
 
   const playCrashSound = () => {
     try {
-      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
+      const ctx = getAudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
       osc.connect(gain);
-      gain.connect(audioCtx.destination);
+      gain.connect(ctx.destination);
       osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(150, audioCtx.currentTime);
-      osc.frequency.linearRampToValueAtTime(40, audioCtx.currentTime + 0.35);
-      gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.35);
+      osc.frequency.setValueAtTime(150, ctx.currentTime);
+      osc.frequency.linearRampToValueAtTime(40, ctx.currentTime + 0.3);
+      gain.gain.setValueAtTime(0.1, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
       osc.start();
-      osc.stop(audioCtx.currentTime + 0.35);
+      osc.stop(ctx.currentTime + 0.3);
     } catch (e) {}
   };
 
   const resetGame = () => {
-    setSnake([
+    const initialSnake = [
       { x: 7, y: 6 },
       { x: 7, y: 7 },
       { x: 7, y: 8 }
-    ]);
+    ];
+    setSnake(initialSnake);
     setDirection('UP');
     setScore(0);
     setGameOver(false);
     setIsPaused(false);
-    generateFood([{ x: 7, y: 6 }, { x: 7, y: 7 }, { x: 7, y: 8 }]);
+    generateFood(initialSnake);
   };
 
   const generateFood = (currentSnake) => {
@@ -77,14 +112,13 @@ export default function SnakeGame({ isOpen, onClose, timeLeft, isWorkSession }) 
         x: Math.floor(Math.random() * GRID_SIZE),
         y: Math.floor(Math.random() * GRID_SIZE)
       };
-      // Check if food coordinate is on snake body
       const onSnake = currentSnake.some(cell => cell.x === newFood.x && cell.y === newFood.y);
       if (!onSnake) break;
     }
     setFood(newFood);
   };
 
-  // Click Wheel and Keyboard Bindings
+  // Inputs routing
   useEffect(() => {
     window.handleSnakeDirection = (dir) => {
       setDirection(prev => {
@@ -109,9 +143,9 @@ export default function SnakeGame({ isOpen, onClose, timeLeft, isWorkSession }) 
         const clockwiseSequence = ['UP', 'RIGHT', 'DOWN', 'LEFT'];
         const idx = clockwiseSequence.indexOf(prev);
         if (dir > 0) {
-          return clockwiseSequence[(idx + 1) % 4]; // Turn 90 deg clockwise
+          return clockwiseSequence[(idx + 1) % 4];
         } else {
-          return clockwiseSequence[(idx + 3) % 4]; // Turn 90 deg counter-clockwise
+          return clockwiseSequence[(idx + 3) % 4];
         }
       });
     };
@@ -125,7 +159,6 @@ export default function SnakeGame({ isOpen, onClose, timeLeft, isWorkSession }) 
     };
 
     window.addEventListener('keydown', handleKeyDown);
-
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       delete window.handleSnakeDirection;
@@ -134,82 +167,125 @@ export default function SnakeGame({ isOpen, onClose, timeLeft, isWorkSession }) 
     };
   }, [gameOver]);
 
-  // Main Game Loop Interval
+  // Game Loop Ticker
   useEffect(() => {
     if (gameOver || isPaused || !isOpen) return;
 
     const moveSnake = () => {
-      setSnake(prevSnake => {
-        const head = prevSnake[0];
-        let newHead = { ...head };
+      const currentSnake = snakeRef.current;
+      const head = currentSnake[0];
+      let newHead = { ...head };
+      const currentDir = directionRef.current;
+      const currentFood = foodRef.current;
+      const currentMode = gameModeRef.current;
 
-        if (direction === 'UP') newHead.y -= 1;
-        if (direction === 'DOWN') newHead.y += 1;
-        if (direction === 'LEFT') newHead.x -= 1;
-        if (direction === 'RIGHT') newHead.x += 1;
+      if (currentDir === 'UP') newHead.y -= 1;
+      if (currentDir === 'DOWN') newHead.y += 1;
+      if (currentDir === 'LEFT') newHead.x -= 1;
+      if (currentDir === 'RIGHT') newHead.x += 1;
 
-        // Check wall crash physics
-        if (gameMode === 'classic') {
-          if (
-            newHead.x < 0 ||
-            newHead.x >= GRID_SIZE ||
-            newHead.y < 0 ||
-            newHead.y >= GRID_SIZE
-          ) {
-            playCrashSound();
-            setGameOver(true);
-            return prevSnake;
-          }
-        } else {
-          // Wrap physics
-          if (newHead.x < 0) newHead.x = GRID_SIZE - 1;
-          if (newHead.x >= GRID_SIZE) newHead.x = 0;
-          if (newHead.y < 0) newHead.y = GRID_SIZE - 1;
-          if (newHead.y >= GRID_SIZE) newHead.y = 0;
-        }
-
-        // Check self crash physics
-        const selfCrash = prevSnake.some((cell, index) => {
-          // ignore tail if not growing, but to be safe check coordinate overlap
-          return index > 0 && cell.x === newHead.x && cell.y === newHead.y;
-        });
-
-        if (selfCrash) {
+      // classic mode boundary crash
+      if (currentMode === 'classic') {
+        if (
+          newHead.x < 0 ||
+          newHead.x >= GRID_SIZE ||
+          newHead.y < 0 ||
+          newHead.y >= GRID_SIZE
+        ) {
           playCrashSound();
           setGameOver(true);
-          return prevSnake;
+          return;
         }
+      } else {
+        // wrap boundary physics
+        if (newHead.x < 0) newHead.x = GRID_SIZE - 1;
+        if (newHead.x >= GRID_SIZE) newHead.x = 0;
+        if (newHead.y < 0) newHead.y = GRID_SIZE - 1;
+        if (newHead.y >= GRID_SIZE) newHead.y = 0;
+      }
 
-        const newSnake = [newHead, ...prevSnake];
-
-        // Check food collision
-        if (newHead.x === food.x && newHead.y === food.y) {
-          playEatSound();
-          setScore(s => {
-            const nextScore = s + 10;
-            if (nextScore > highScore) {
-              setHighScore(nextScore);
-              localStorage.setItem('study-sound-snake-high', nextScore.toString());
-            }
-            return nextScore;
-          });
-          generateFood(newSnake);
-        } else {
-          newSnake.pop(); // remove tail
-        }
-
-        return newSnake;
+      // self crash
+      const selfCrash = currentSnake.some((cell, index) => {
+        return index > 0 && cell.x === newHead.x && cell.y === newHead.y;
       });
+
+      if (selfCrash) {
+        playCrashSound();
+        setGameOver(true);
+        return;
+      }
+
+      const newSnake = [newHead, ...currentSnake];
+
+      // food collision
+      if (newHead.x === currentFood.x && newHead.y === currentFood.y) {
+        playEatSound();
+        setScore(s => {
+          const nextScore = s + 10;
+          if (nextScore > highScore) {
+            setHighScore(nextScore);
+            localStorage.setItem('study-sound-snake-high', nextScore.toString());
+          }
+          return nextScore;
+        });
+        generateFood(newSnake);
+      } else {
+        newSnake.pop();
+      }
+
+      setSnake(newSnake);
     };
 
     gameLoopRef.current = setInterval(moveSnake, 160);
-
     return () => {
       if (gameLoopRef.current) clearInterval(gameLoopRef.current);
     };
-  }, [direction, gameOver, isPaused, isOpen, food, gameMode, highScore]);
+  }, [gameOver, isPaused, isOpen, highScore]);
 
-  // Format break countdown timer
+  // Canvas Drawing Routine
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    const width = canvas.width;
+    const height = canvas.height;
+    const cellSize = width / GRID_SIZE;
+
+    // Background (Nokia LCD screen tint)
+    ctx.fillStyle = '#8bac0f';
+    ctx.fillRect(0, 0, width, height);
+
+    // Light grid lines/cells for pixelated look
+    ctx.fillStyle = '#9bbc0f';
+    for (let x = 0; x < GRID_SIZE; x++) {
+      for (let y = 0; y < GRID_SIZE; y++) {
+        ctx.fillRect(x * cellSize + 0.8, y * cellSize + 0.8, cellSize - 1.6, cellSize - 1.6);
+      }
+    }
+
+    // Draw Food (red apple design)
+    ctx.fillStyle = '#ef4444';
+    ctx.beginPath();
+    const centerX = food.x * cellSize + cellSize / 2;
+    const centerY = food.y * cellSize + cellSize / 2;
+    const radius = (cellSize - 3.5) / 2;
+    ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+    ctx.fill();
+
+    // Draw Snake Body (Dark Green)
+    ctx.fillStyle = '#306230';
+    for (let i = 1; i < snake.length; i++) {
+      const cell = snake[i];
+      ctx.fillRect(cell.x * cellSize + 0.8, cell.y * cellSize + 0.8, cellSize - 1.6, cellSize - 1.6);
+    }
+
+    // Draw Snake Head (Very Dark Green)
+    ctx.fillStyle = '#0f380f';
+    const head = snake[0];
+    ctx.fillRect(head.x * cellSize + 0.8, head.y * cellSize + 0.8, cellSize - 1.6, cellSize - 1.6);
+  }, [snake, food]);
+
   const formatTime = (secs) => {
     const m = Math.floor(secs / 60);
     const s = secs % 60;
@@ -227,7 +303,6 @@ export default function SnakeGame({ isOpen, onClose, timeLeft, isWorkSession }) 
       transition={{ type: "tween", duration: 0.25, ease: "easeOut" }}
     >
       <div className="settings-header">
-        {/* Dynamic Pomodoro Break Time Header */}
         <h3>
           {!isWorkSession ? `Break: ${formatTime(timeLeft)}` : 'iPod Snake'}
         </h3>
@@ -237,7 +312,6 @@ export default function SnakeGame({ isOpen, onClose, timeLeft, isWorkSession }) 
       </div>
 
       <div className="settings-content snake-content">
-        {/* Top Info Bar */}
         <div className="snake-top-bar">
           <div className="snake-score-wrapper">
             <span>Score: <b className="lcd-num">{score}</b></span>
@@ -251,28 +325,14 @@ export default function SnakeGame({ isOpen, onClose, timeLeft, isWorkSession }) 
           </button>
         </div>
 
-        {/* Retro Green Snake Grid Screen */}
         <div className="snake-grid-wrapper">
-          <div className="snake-grid">
-            {Array.from({ length: GRID_SIZE }).map((_, y) => (
-              <div key={y} className="snake-row">
-                {Array.from({ length: GRID_SIZE }).map((_, x) => {
-                  const isSnakeHead = snake[0].x === x && snake[0].y === y;
-                  const isSnakeBody = snake.some((cell, index) => index > 0 && cell.x === x && cell.y === y);
-                  const isFood = food.x === x && food.y === y;
+          <canvas 
+            ref={canvasRef} 
+            width={168} 
+            height={168} 
+            className="snake-canvas"
+          />
 
-                  return (
-                    <div
-                      key={x}
-                      className={`snake-cell ${isSnakeHead ? 'snake-head' : ''} ${isSnakeBody ? 'snake-body' : ''} ${isFood ? 'snake-food' : ''}`}
-                    />
-                  );
-                })}
-              </div>
-            ))}
-          </div>
-
-          {/* Overlays for Game Over / Pause */}
           {gameOver && (
             <div className="snake-overlay">
               <div className="overlay-title">GAME OVER</div>

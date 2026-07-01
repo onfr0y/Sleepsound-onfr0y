@@ -241,7 +241,7 @@ function App() {
   const [showWallpaperPicker, setShowWallpaperPicker] = useState(false);
   const [showTasks, setShowTasks] = useState(false);
   const [showNotesPanel, setShowNotesPanel] = useState(false);
-  const [showSnakePanel, setShowSnakePanel] = useState(false);
+  const [showSnakePanel, setShowSnakePanel] = useState(true);
   const isIpodMode = true;
   const [pulse, setPulse] = useState(false);
   const [repCount, setRepCount] = useState(0);
@@ -973,6 +973,28 @@ function App() {
     }
   };
 
+  const handleToggleWorkBreak = () => {
+    setIsRunning(false);
+    setIsWorkSession((prevIsWork) => {
+      const newIsWork = !prevIsWork;
+      if (prevIsWork) {
+        // transitioning from Work to Break
+        const newRep = repCount + 1;
+        setRepCount(newRep);
+        repCountRef.current = newRep;
+        playCompletionSound();
+        const calcTime = (newRep % 4 === 0) ? (30 * 60) : breakTime;
+        setTimeLeft(calcTime);
+        setTotalTime(calcTime);
+      } else {
+        // transitioning from Break to Work
+        setTimeLeft(workTime);
+        setTotalTime(workTime);
+      }
+      return newIsWork;
+    });
+  };
+
   const handleModeChange = (mode) => {
     setCurrentMode(mode);
     setIsRunning(false);
@@ -1443,16 +1465,25 @@ function App() {
             <div className={`timer-display ${pulse ? 'pulse' : ''}`}>
               {formatTime(timeLeft)}
             </div>
-            {/* Play Snake Game shortcut button during Pomodoro Break */}
-            {(!isWorkSession && !isMeditationMode && !isReadingMode) && (
-              <div style={{ marginTop: '0.4rem', textAlign: 'center' }}>
+            {/* Play Snake & Manual Session Toggle button during study or break */}
+            {(!isMeditationMode && !isReadingMode) && (
+              <div style={{ marginTop: '0.4rem', display: 'flex', gap: '0.4rem', justifyContent: 'center', flexWrap: 'wrap' }}>
                 <button
                   className="interval-btn"
                   style={{ padding: '0.45rem 0.8rem', borderRadius: '10px', fontSize: '0.72rem', background: 'rgba(255, 255, 255, 0.05)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                  onClick={() => setShowSnakePanel(true)}
+                  onClick={handleToggleWorkBreak}
                 >
-                  <span>🕹️ Play Snake</span>
+                  <span>{isWorkSession ? '⏱️ Switch to Break' : '⏱️ Switch to Study'}</span>
                 </button>
+                {!isWorkSession && (
+                  <button
+                    className="interval-btn"
+                    style={{ padding: '0.45rem 0.8rem', borderRadius: '10px', fontSize: '0.72rem', background: 'rgba(255, 255, 255, 0.05)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                    onClick={() => setShowSnakePanel(true)}
+                  >
+                    <span>🕹️ Play Snake</span>
+                  </button>
+                )}
               </div>
             )}
             <AmbientWaveform 
