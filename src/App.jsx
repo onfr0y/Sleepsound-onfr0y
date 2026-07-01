@@ -1311,19 +1311,7 @@ function App() {
                         <span>&rarr;</span>
                       </button>
                     </div>
-                    <div className="setting-item" style={{ marginTop: '0.4rem' }}>
-                      <button 
-                        className="sound-option-btn" 
-                        style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0.6rem' }}
-                        onClick={() => {
-                          setShowSettings(false);
-                          setShowSnakePanel(true);
-                        }}
-                      >
-                        <span style={{ fontWeight: 600 }}>Play Snake Game</span>
-                        <span>&rarr;</span>
-                      </button>
-                    </div>
+
                   </div>
                 </motion.div>
               )}
