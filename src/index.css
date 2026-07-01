@@ -2975,3 +2975,110 @@ body {
     border-color: rgba(255, 255, 255, 0.2) !important;
     color: #ffffff !important;
 }
+
+/* ─── Apple Settings Styling ──────────────────────────── */
+.apple-group {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 0.8rem;
+    width: 100%;
+}
+
+.apple-group-title {
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: rgba(255, 255, 255, 0.4);
+    font-weight: 700;
+    padding: 0 0.4rem 0.25rem 0.4rem;
+}
+
+.apple-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.55rem 0.75rem;
+    background: transparent;
+    border: none;
+    width: 100%;
+    text-align: left;
+    color: white;
+    font-size: 0.76rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    transition: background 0.15s ease;
+    cursor: pointer;
+}
+
+.apple-row:last-child {
+    border-bottom: none;
+}
+
+.apple-row:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.apple-row:active {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.apple-icon-wrapper {
+    width: 20px;
+    height: 20px;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    margin-right: 0.6rem;
+    flex-shrink: 0;
+}
+
+.bg-blue { background: #007aff; }
+.bg-green { background: #34c759; }
+.bg-purple { background: #af52de; }
+
+.apple-slider-row {
+    display: flex;
+    flex-direction: column;
+    padding: 0.55rem 0.75rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    width: 100%;
+}
+
+.apple-slider-row:last-child {
+    border-bottom: none;
+}
+
+.apple-slider-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.74rem;
+    color: white;
+    margin-bottom: 0.3rem;
+}
+
+.apple-slider-input-wrapper {
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.apple-slider-input-wrapper input[type="range"] {
+    flex: 1;
+    height: 3px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.2);
+    accent-color: #34c759;
+    outline: none;
+    cursor: pointer;
+}
+
+.apple-slider-val {
+    font-size: 0.68rem;
+    color: rgba(255, 255, 255, 0.45);
+}

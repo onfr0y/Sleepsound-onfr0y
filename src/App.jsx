@@ -242,6 +242,7 @@ function App() {
   const [showTasks, setShowTasks] = useState(false);
   const [showNotesPanel, setShowNotesPanel] = useState(false);
   const [showSnakePanel, setShowSnakePanel] = useState(false);
+  const [showSoundPicker, setShowSoundPicker] = useState(false);
   const isIpodMode = true;
   const [pulse, setPulse] = useState(false);
   const [repCount, setRepCount] = useState(0);
@@ -540,7 +541,7 @@ function App() {
   };
 
   const handleWheelRotation = (direction) => {
-    if (showSettings) {
+    if (showSettings || showSoundPicker) {
       const scrollable = document.querySelector('.sound-options-scrollable') || document.querySelector('.settings-content');
       if (scrollable) {
         scrollable.scrollTop += direction * 25;
@@ -1232,86 +1233,176 @@ function App() {
                       <X size={18} />
                     </button>
                   </div>
-                  <div className="settings-content">
-                    <div className="setting-item">
-                      <label>Background Sound</label>
-                      <div className="sound-options-scrollable">
-                        {soundCategories.map((category) => (
-                          <div key={category.name} className="sound-category-group">
-                            <div className="sound-category-header">{category.name}</div>
-                            <div className="sound-options">
-                              {Object.entries(category.sounds).map(([key, sound]) => (
-                                <button
-                                  key={key}
-                                  className={`sound-option-btn ${currentSound === key ? 'active' : ''}`}
-                                  onClick={() => handleSoundChange(key)}
-                                >
-                                  <div className="sound-option-title">{sound.name}</div>
-                                  <div className="sound-option-desc">{sound.description}</div>
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="setting-item">
-                      <label>Ambient Mixer</label>
-                      <div className="mixer-sliders">
-                        <div className="mixer-slider-row">
-                          <span>🌧️ Rain</span>
-                          <input 
-                            type="range" 
-                            min="0" 
-                            max="100" 
-                            value={rainVolume} 
-                            onChange={(e) => setRainVolume(parseInt(e.target.value))} 
-                          />
-                          <span className="slider-val">{rainVolume}%</span>
-                        </div>
-                        <div className="mixer-slider-row">
-                          <span>🌊 Ocean</span>
-                          <input 
-                            type="range" 
-                            min="0" 
-                            max="100" 
-                            value={wavesVolume} 
-                            onChange={(e) => setWavesVolume(parseInt(e.target.value))} 
-                          />
-                          <span className="slider-val">{wavesVolume}%</span>
-                        </div>
-                        <div className="mixer-slider-row">
-                          <span>📺 Noise</span>
-                          <input 
-                            type="range" 
-                            min="0" 
-                            max="100" 
-                            value={whiteNoiseVolume} 
-                            onChange={(e) => setWhiteNoiseVolume(parseInt(e.target.value))} 
-                          />
-                          <span className="slider-val">{whiteNoiseVolume}%</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="setting-item">
-                      <label htmlFor="ipod-volume">Volume</label>
-                      <input type="range" id="ipod-volume" min="0" max="100" value={volume} onChange={handleVolumeChange} />
-                      <span>{volume}%</span>
-                    </div>
-                    <div className="setting-item" style={{ marginTop: '0.4rem' }}>
+                  <div className="settings-content" style={{ padding: '0.2rem' }}>
+                    
+                    <div className="apple-group-title">Sounds & Music</div>
+                    <div className="apple-group">
                       <button 
-                        className="sound-option-btn" 
-                        style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0.6rem' }}
+                        className="apple-row"
+                        onClick={() => setShowSoundPicker(true)}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                          <div className="apple-icon-wrapper bg-blue">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M9 18V5l12-2v13" />
+                              <circle cx="6" cy="18" r="3" />
+                              <circle cx="18" cy="16" r="3" />
+                            </svg>
+                          </div>
+                          <span>Focus Music</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <span style={{ fontSize: '0.68rem', color: 'rgba(255, 255, 255, 0.45)', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {(() => {
+                              for (const cat of soundCategories) {
+                                if (cat.sounds[currentSound]) return cat.sounds[currentSound].name;
+                              }
+                              return 'Default';
+                            })()}
+                          </span>
+                          <span style={{ color: 'rgba(255, 255, 255, 0.25)', fontSize: '0.75rem' }}>&rarr;</span>
+                        </div>
+                      </button>
+
+                      <div className="apple-slider-row">
+                        <div className="apple-slider-header">
+                          <div style={{ display: 'flex', alignItems: 'center' }}>
+                            <div className="apple-icon-wrapper bg-green">
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" />
+                              </svg>
+                            </div>
+                            <span>Volume</span>
+                          </div>
+                          <span className="apple-slider-val">{volume}%</span>
+                        </div>
+                        <div className="apple-slider-input-wrapper">
+                          <input type="range" min="0" max="100" value={volume} onChange={handleVolumeChange} />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="apple-group-title">Ambient Mixer</div>
+                    <div className="apple-group">
+                      <div className="apple-slider-row">
+                        <div className="apple-slider-header">
+                          <span>Rain</span>
+                          <span className="apple-slider-val">{rainVolume}%</span>
+                        </div>
+                        <div className="apple-slider-input-wrapper">
+                          <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            value={rainVolume}
+                            onChange={(e) => setRainVolume(parseInt(e.target.value))}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="apple-slider-row">
+                        <div className="apple-slider-header">
+                          <span>Ocean</span>
+                          <span className="apple-slider-val">{wavesVolume}%</span>
+                        </div>
+                        <div className="apple-slider-input-wrapper">
+                          <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            value={wavesVolume}
+                            onChange={(e) => setWavesVolume(parseInt(e.target.value))}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="apple-slider-row">
+                        <div className="apple-slider-header">
+                          <span>White Noise</span>
+                          <span className="apple-slider-val">{whiteNoiseVolume}%</span>
+                        </div>
+                        <div className="apple-slider-input-wrapper">
+                          <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            value={whiteNoiseVolume}
+                            onChange={(e) => setWhiteNoiseVolume(parseInt(e.target.value))}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="apple-group-title">Tools</div>
+                    <div className="apple-group">
+                      <button 
+                        className="apple-row"
                         onClick={() => {
                           setShowSettings(false);
                           setShowNotesPanel(true);
                         }}
                       >
-                        <span style={{ fontWeight: 600 }}>Notes & Logs</span>
-                        <span>&rarr;</span>
+                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                          <div className="apple-icon-wrapper bg-purple">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                            </svg>
+                          </div>
+                          <span>Notes & Logs</span>
+                        </div>
+                        <span style={{ color: 'rgba(255, 255, 255, 0.25)', fontSize: '0.75rem' }}>&rarr;</span>
                       </button>
                     </div>
 
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          )}
+
+          {/* Focus Music Sound Picker sub-panel */}
+          {isIpodMode && (
+            <AnimatePresence>
+              {showSoundPicker && (
+                <motion.div
+                  className="ipod-screen-panel"
+                  initial={{ x: "100%" }}
+                  animate={{ x: 0 }}
+                  exit={{ x: "100%" }}
+                  transition={{ type: "tween", duration: 0.25, ease: "easeOut" }}
+                >
+                  <div className="settings-header">
+                    <button className="icon-button" onClick={() => setShowSoundPicker(false)} style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                      &larr; Back
+                    </button>
+                    <h3>Focus Music</h3>
+                    <div style={{ width: 40 }}></div>
+                  </div>
+                  <div className="settings-content" style={{ padding: '0.2rem' }}>
+                    {soundCategories.map((category) => (
+                      <div key={category.name} style={{ marginBottom: '0.4rem' }}>
+                        <div className="apple-group-title">{category.name}</div>
+                        <div className="apple-group">
+                          {Object.entries(category.sounds).map(([key, sound]) => (
+                            <button
+                              key={key}
+                              className="apple-row"
+                              onClick={() => handleSoundChange(key)}
+                              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0.6rem' }}
+                            >
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                <span style={{ fontWeight: 600, fontSize: '0.72rem' }}>{sound.name}</span>
+                                <span style={{ fontSize: '0.55rem', color: 'rgba(255, 255, 255, 0.45)' }}>{sound.description}</span>
+                              </div>
+                              {currentSound === key && (
+                                <span style={{ color: '#34c759', fontWeight: 'bold', fontSize: '0.75rem' }}>✓</span>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </motion.div>
               )}
