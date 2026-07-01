@@ -241,7 +241,7 @@ function App() {
   const [showWallpaperPicker, setShowWallpaperPicker] = useState(false);
   const [showTasks, setShowTasks] = useState(false);
   const [showNotesPanel, setShowNotesPanel] = useState(false);
-  const [showSnakePanel, setShowSnakePanel] = useState(true);
+  const [showSnakePanel, setShowSnakePanel] = useState(false);
   const isIpodMode = true;
   const [pulse, setPulse] = useState(false);
   const [repCount, setRepCount] = useState(0);
@@ -1465,25 +1465,16 @@ function App() {
             <div className={`timer-display ${pulse ? 'pulse' : ''}`}>
               {formatTime(timeLeft)}
             </div>
-            {/* Play Snake & Manual Session Toggle button during study or break */}
-            {(!isMeditationMode && !isReadingMode) && (
-              <div style={{ marginTop: '0.4rem', display: 'flex', gap: '0.4rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+            {/* Play Snake Game shortcut button during Pomodoro Break */}
+            {(!isWorkSession && !isMeditationMode && !isReadingMode) && (
+              <div style={{ marginTop: '0.4rem', display: 'flex', justifyContent: 'center' }}>
                 <button
                   className="glass-btn"
                   style={{ padding: '0.45rem 0.8rem', borderRadius: '10px', fontSize: '0.72rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                  onClick={handleToggleWorkBreak}
+                  onClick={() => setShowSnakePanel(true)}
                 >
-                  <span>{isWorkSession ? 'Switch to Break' : 'Switch to Study'}</span>
+                  <span>Play Snake</span>
                 </button>
-                {!isWorkSession && (
-                  <button
-                    className="glass-btn"
-                    style={{ padding: '0.45rem 0.8rem', borderRadius: '10px', fontSize: '0.72rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                    onClick={() => setShowSnakePanel(true)}
-                  >
-                    <span>Play Snake</span>
-                  </button>
-                )}
               </div>
             )}
             <AmbientWaveform 
